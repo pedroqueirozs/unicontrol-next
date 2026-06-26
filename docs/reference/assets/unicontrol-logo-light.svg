@@ -1,0 +1,8 @@
+<svg width="220" height="60" viewBox="0 0 220 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="25" width="10" height="25" rx="2" fill="#FF7043"/>
+  <rect x="15" y="15" width="10" height="35" rx="2" fill="#FFCA28"/>
+  <rect x="30" y="5" width="10" height="45" rx="2" fill="#34D399"/>
+  <text x="50" y="41" font-family="system-ui, -apple-system, sans-serif" font-size="26" font-weight="700" letter-spacing="-0.5">
+    <tspan fill="#FFFFFF">Uni</tspan><tspan fill="#34D399">Control</tspan>
+  </text>
+</svg>

@@ -1,26 +1,211 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Dark mode via classe .dark no <html> */
+@custom-variant dark (&:is(.dark *));
 
+/*
+  @theme inline: registra variáveis CSS como tokens Tailwind.
+  Cada --color-foo vira utilitário bg-foo, text-foo, border-foo etc.
+*/
 @theme inline {
+  /* Fontes */
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-inter);
+
+  /* Cores semânticas do Shadcn (necessárias para os componentes deles) */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Border radius */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Tokens extras do UniControl */
+  --color-details-green: var(--details-green);
+  --color-details-red: var(--details-red);
+  --color-neutral: var(--neutral);
+  --color-input-bg: var(--input-bg);
+  --color-input-icon-bg: var(--input-icon-bg);
+  --color-input-icon-text: var(--input-icon-text);
+  --color-notify-error: var(--notify-error);
+  --color-notify-success: var(--notify-success);
+  --color-notify-warn: var(--notify-warn);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* =============================================
+   LIGHT MODE
+   ============================================= */
+:root {
+  /* Superfícies */
+  --background: hsl(0 0% 96%);
+  --foreground: hsl(0 0% 33%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(0 0% 33%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(0 0% 33%);
+
+  /* Brand / ações primárias */
+  --primary: hsl(234 58% 24%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(210 29% 24%);
+  --secondary-foreground: hsl(0 0% 80%);
+
+  /* Superfícies sutis */
+  --muted: hsl(216 33% 97%);
+  --muted-foreground: hsl(204 8% 76%);
+
+  /* Accent — verde */
+  --accent: hsl(158 64% 52%);
+  --accent-foreground: hsl(0 0% 100%);
+
+  /* Destrutivo */
+  --destructive: hsl(6 78% 57%);
+
+  /* Bordas e inputs */
+  --border: hsl(0 0% 88%);
+  --input: hsl(0 0% 88%);
+  --ring: hsl(158 64% 52%);
+
+  /* Sidebar */
+  --sidebar: hsl(210 29% 24%);
+  --sidebar-foreground: hsl(0 0% 80%);
+  --sidebar-primary: hsl(234 58% 24%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(158 64% 52%);
+  --sidebar-accent-foreground: hsl(0 0% 100%);
+  --sidebar-border: hsl(210 25% 20%);
+  --sidebar-ring: hsl(158 64% 52%);
+
+  /* Gráficos */
+  --chart-1: hsl(234 58% 24%);
+  --chart-2: hsl(158 64% 52%);
+  --chart-3: hsl(145 63% 49%);
+  --chart-4: hsl(217 91% 60%);
+  --chart-5: hsl(6 78% 57%);
+
+  /* Border radius base */
+  --radius: 0.5rem;
+
+  /* Tokens extras UniControl */
+  --details-green: hsl(158 64% 52%);
+  --details-red: hsl(6 78% 57%);
+  --neutral: hsl(204 8% 76%);
+  --input-bg: hsl(216 33% 97%);
+  --input-icon-bg: hsl(158 64% 52%);
+  --input-icon-text: hsl(0 0% 100%);
+  --notify-error: hsl(6 78% 57%);
+  --notify-success: hsl(145 63% 49%);
+  --notify-warn: hsl(217 91% 60%);
+}
+
+/* =============================================
+   DARK MODE
+   ============================================= */
+.dark {
+  /* Superfícies */
+  --background: hsl(222 22% 9%);
+  --foreground: hsl(0 0% 80%);
+  --card: hsl(220 18% 14%);
+  --card-foreground: hsl(0 0% 80%);
+  --popover: hsl(220 18% 14%);
+  --popover-foreground: hsl(0 0% 80%);
+
+  /* Brand / ações primárias */
+  --primary: hsl(234 55% 26%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(210 29% 24%);
+  --secondary-foreground: hsl(0 0% 95%);
+
+  /* Superfícies sutis */
+  --muted: hsl(220 18% 18%);
+  --muted-foreground: hsl(204 8% 40%);
+
+  /* Accent — verde */
+  --accent: hsl(158 60% 58%);
+  --accent-foreground: hsl(0 0% 100%);
+
+  /* Destrutivo */
+  --destructive: hsl(6 75% 62%);
+
+  /* Bordas e inputs */
+  --border: hsl(220 15% 28%);
+  --input: hsl(220 15% 28%);
+  --ring: hsl(158 60% 58%);
+
+  /* Sidebar (mantém a identidade da marca nos dois modos) */
+  --sidebar: hsl(210 29% 24%);
+  --sidebar-foreground: hsl(0 0% 95%);
+  --sidebar-primary: hsl(234 55% 26%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(158 60% 58%);
+  --sidebar-accent-foreground: hsl(0 0% 100%);
+  --sidebar-border: hsl(210 25% 20%);
+  --sidebar-ring: hsl(158 60% 58%);
+
+  /* Gráficos */
+  --chart-1: hsl(234 45% 60%);
+  --chart-2: hsl(158 60% 58%);
+  --chart-3: hsl(145 55% 55%);
+  --chart-4: hsl(217 80% 65%);
+  --chart-5: hsl(6 75% 62%);
+
+  /* Tokens extras UniControl */
+  --details-green: hsl(158 60% 58%);
+  --details-red: hsl(6 75% 62%);
+  --neutral: hsl(204 8% 40%);
+  --input-bg: hsl(220 18% 18%);
+  --input-icon-bg: hsl(158 60% 58%);
+  --input-icon-text: hsl(0 0% 100%);
+  --notify-error: hsl(6 78% 57%);
+  --notify-success: hsl(145 63% 49%);
+  --notify-warn: hsl(217 91% 60%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }

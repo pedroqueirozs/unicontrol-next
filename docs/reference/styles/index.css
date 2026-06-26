@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* =======================================
+       BACKGROUNDS
+       ======================================= */
+    --background: 0 0 96%;
+    --background-primary-500: 234 58 24%;
+    --background-primary-400: 210 29 24%;
+    --background-white: 0 0 100%;
+
+    /* =======================================
+       TEXTOS
+       ======================================= */
+    --text-primary-500: 234 58 28%;
+    --text-primary-400: 210 29 24%;
+    --text-primary-300: 209 26 32%;
+
+    --text-secondary: 0 0 33%;
+    --text-white: 0 0 80%;
+
+    --neutral: 204 8 76%;
+
+    --details-green: 158 64 52%;
+    --details-red: 6 78 57%;
+
+    /* =======================================
+       INPUTS
+       ======================================= */
+    --input-bg: 216 33 97%;
+    --input-border: 0 0 88%;
+    --input-border-focus: 158 64 52%;
+
+    --input-text-icon: 0 0 100%;
+    --input-bg-icon: 158 64 52%;
+
+    /* =======================================
+       NOTIFICAÇÕES
+       ======================================= */
+    --notification-error: 6 78 57%;
+    --notification-success: 145 63 49%;
+    --notification-warn: 217 91 60%;
+  }
+
+  .dark {
+    /* =======================================
+       BACKGROUNDS (dark)
+       ======================================= */
+    --background: 222 22 9%;
+    --background-primary-500: 234 55 26%;
+    --background-primary-400: 210 29 24%;
+    --background-white: 220 18 14%;
+
+    /* =======================================
+       TEXTOS (dark)
+       ======================================= */
+    --text-primary-500: 234 45 75%;
+    --text-primary-400: 210 30 80%;
+    --text-primary-300: 209 25 85%;
+
+    --text-secondary: 0 0 80%;
+    --text-white: 0 0 95%;
+
+    --neutral: 204 8 40%;
+
+    --details-green: 158 60 58%;
+    --details-red: 6 75 62%;
+
+    /* =======================================
+       INPUTS (dark)
+       ======================================= */
+    --input-bg: 220 18 18%;
+    --input-border: 220 15 28%;
+    --input-border-focus: 158 64 52%;
+
+    --input-text-icon: 0 0 100%;
+    --input-bg-icon: 158 64 52%;
+
+    /* =======================================
+       NOTIFICAÇÕES (dark)
+       ======================================= */
+    --notification-error: 6 78 57%;
+    --notification-success: 145 63 49%;
+    --notification-warn: 217 91 60%;
+  }
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--text-secondary));
+  font-family: "Inter", sans-serif;
+}
