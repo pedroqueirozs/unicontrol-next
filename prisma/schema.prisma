@@ -40,8 +40,10 @@ model Company {
 
   createdAt DateTime @default(now())
 
-  users   User[]
-  invites Invite[]
+  users     User[]
+  invites   Invite[]
+  clients   Client[]
+  suppliers Supplier[]
 }
 
 // =============================================
@@ -131,4 +133,63 @@ model Invite {
   company   Company @relation(fields: [companyId], references: [id])
 
   createdAt DateTime @default(now())
+}
+
+// =============================================
+// CADASTROS
+// =============================================
+
+// Cliente cadastrado no sistema.
+// Fonte de dados central para Mercadorias, Endereços e Pendências de Clientes.
+// Código gerado automaticamente (C-001, C-002...) — não inserido manualmente (RN-20).
+model Client {
+  id           String  @id @default(cuid())
+  code         String  // C-001, C-002... gerado automaticamente
+  name         String
+  cnpj              String  // CNPJ ou CPF com máscara — obrigatório (RN-20)
+  stateRegistration String? // Inscrição Estadual — null = Isento
+  street            String?
+  number            String?
+  complement        String?
+  neighborhood      String?
+  city              String?
+  state             String?
+  zipCode           String?
+  phone             String?
+  email             String?
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+// Fornecedor cadastrado no sistema.
+// Estrutura idêntica à de clientes — código no formato F-001, F-002...
+model Supplier {
+  id           String  @id @default(cuid())
+  code         String  // F-001, F-002... gerado automaticamente
+  name         String
+  cnpj              String  // CNPJ ou CPF com máscara — obrigatório (RN-20)
+  stateRegistration String? // Inscrição Estadual — null = Isento
+  street            String?
+  number            String?
+  complement        String?
+  neighborhood      String?
+  city              String?
+  state             String?
+  zipCode           String?
+  phone             String?
+  email             String?
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
 }
