@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { usePathname } from "next/navigation"
+import Link from "next/link"
 import { Menu, User } from "lucide-react"
 import { signOut } from "next-auth/react"
 
@@ -19,6 +20,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/manage-users": "Gerenciar Usuários",
   "/profile": "Meu Perfil",
 }
+
 
 interface HeaderProps {
   userName?: string | null
@@ -73,12 +75,13 @@ export function Header({ userName, onMenuClick }: HeaderProps) {
               <div className="px-4 py-2 border-b border-border">
                 <p className="text-sm font-medium text-foreground truncate">{userName}</p>
               </div>
-              <button
+              <Link
+                href="/profile"
                 onClick={() => setMenuOpen(false)}
-                className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                className="block w-full px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
               >
                 Meu Perfil
-              </button>
+              </Link>
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
                 className="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-muted transition-colors"
