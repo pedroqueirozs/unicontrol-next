@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Eye, EyeOff } from "lucide-react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { FormInput } from "@/components/form-input"
 
 const registerSchema = z
@@ -26,8 +26,10 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
 
   const searchParams = useSearchParams()
+  const router = useRouter()
   const token = searchParams.get("token")
 
   const {
@@ -40,9 +42,29 @@ export default function RegisterPage() {
 
   async function onSubmit(data: RegisterData) {
     setIsLoading(true)
-    // TODO: validar token e criar conta via API após configurar as tabelas
-    console.log("register:", { ...data, token })
-    setIsLoading(false)
+    setErro(null)
+
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token,
+        name: data.name,
+        email: data.email,
+        password: data.password,
+      }),
+    })
+
+    const json = await res.json()
+
+    if (!res.ok) {
+      setErro(json.error ?? "Erro ao criar conta.")
+      setIsLoading(false)
+      return
+    }
+
+    // Conta criada — vai para o login
+    router.push("/login?cadastro=ok")
   }
 
   // Convite inválido — sem token na URL
@@ -127,6 +149,10 @@ export default function RegisterPage() {
           }
           {...register("confirmPassword")}
         />
+
+        {erro && (
+          <p className="text-sm text-destructive text-center -mb-1">{erro}</p>
+        )}
 
         <button
           type="submit"
