@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -22,7 +22,10 @@ const registerSchema = z
 
 type RegisterData = z.infer<typeof registerSchema>
 
-export default function RegisterPage() {
+// useSearchParams() precisa de Suspense boundary em Client Components no App Router.
+// A solução é extrair o conteúdo que usa o hook para um componente interno
+// e exportar um wrapper com <Suspense> como default.
+function RegisterContent() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -163,5 +166,13 @@ export default function RegisterPage() {
         </button>
       </form>
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterContent />
+    </Suspense>
   )
 }

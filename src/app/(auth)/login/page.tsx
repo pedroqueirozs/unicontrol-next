@@ -46,7 +46,8 @@ export default function LoginPage() {
       return
     }
 
-    // Redireciona para o dashboard — o middleware cuida das permissões por role
+    // refresh() faz o Next.js reler a sessão antes de navegar
+    router.refresh()
     router.push("/dashboard")
   }
 
