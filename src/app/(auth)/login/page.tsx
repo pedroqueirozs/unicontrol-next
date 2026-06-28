@@ -5,6 +5,8 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Eye, EyeOff } from "lucide-react"
+import { signIn } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { FormInput } from "@/components/form-input"
 
 const loginSchema = z.object({
@@ -17,6 +19,8 @@ type LoginData = z.infer<typeof loginSchema>
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+  const router = useRouter()
 
   const {
     register,
@@ -28,9 +32,22 @@ export default function LoginPage() {
 
   async function onSubmit(data: LoginData) {
     setIsLoading(true)
-    // TODO: implementar signIn com NextAuth após configurar as tabelas
-    console.log("login:", data)
-    setIsLoading(false)
+    setErro(null)
+
+    const result = await signIn("credentials", {
+      email: data.email,
+      password: data.password,
+      redirect: false, // tratamos o redirecionamento manualmente
+    })
+
+    if (result?.error) {
+      setErro("E-mail ou senha incorretos.")
+      setIsLoading(false)
+      return
+    }
+
+    // Redireciona para o dashboard — o middleware cuida das permissões por role
+    router.push("/dashboard")
   }
 
   return (
@@ -70,6 +87,10 @@ export default function LoginPage() {
           }
           {...register("password")}
         />
+
+        {erro && (
+          <p className="text-sm text-destructive text-center -mb-1">{erro}</p>
+        )}
 
         <button
           type="submit"
