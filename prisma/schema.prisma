@@ -33,16 +33,18 @@ enum CarrierType {
 // Por enquanto teremos apenas uma, mas a estrutura já está pronta
 // para multi-tenant: cada dado de negócio vai ter um companyId.
 model Company {
-  id        String  @id @default(cuid())
-  name      String
-  street    String?
-  district  String?
-  city      String?
-  state     String?
-  zip       String?
-  phone     String?
-  whatsapp  String?
-  logoUrl   String?
+  id                String  @id @default(cuid())
+  name              String
+  cnpj              String?
+  stateRegistration String?
+  street            String?
+  district          String?
+  city              String?
+  state             String?
+  zip               String?
+  phone             String?
+  whatsapp          String?
+  logoUrl           String?
 
   createdAt DateTime @default(now())
 
