@@ -1,7 +1,11 @@
-import { auth } from "@/auth"
+import NextAuth from "next-auth"
+import { authConfig } from "@/auth.config"
 import { NextResponse } from "next/server"
 
-// Rotas que não precisam de autenticação
+// O middleware usa apenas o authConfig (sem Prisma) porque roda no Edge runtime,
+// que não tem Node.js completo. A validação real de senha acontece no auth.ts.
+const { auth } = NextAuth(authConfig)
+
 const PUBLIC_ROUTES = ["/login", "/register"]
 
 export default auth((req) => {
@@ -9,12 +13,10 @@ export default auth((req) => {
   const isLoggedIn = !!session
   const isPublicRoute = PUBLIC_ROUTES.some((r) => nextUrl.pathname.startsWith(r))
 
-  // Usuário autenticado tentando acessar login/register → redireciona para o app
   if (isLoggedIn && isPublicRoute) {
     return NextResponse.redirect(new URL("/dashboard", nextUrl))
   }
 
-  // Usuário não autenticado tentando acessar rota protegida → vai para o login
   if (!isLoggedIn && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", nextUrl))
   }
@@ -23,6 +25,5 @@ export default auth((req) => {
 })
 
 export const config = {
-  // Aplica o middleware em todas as rotas, exceto arquivos estáticos e internos do Next.js
   matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.svg|.*\\.png).*)"],
 }
