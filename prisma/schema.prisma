@@ -19,6 +19,12 @@ enum Role {
   vendas
 }
 
+// Tipo de transportadora: empresa com dados completos ou entrega simples (só nome).
+enum CarrierType {
+  empresa  // Braspress, Correios, empresa de ônibus etc.
+  simples  // Retirada na empresa, Táxi, Entrega própria etc.
+}
+
 // =============================================
 // EMPRESA
 // =============================================
@@ -44,6 +50,7 @@ model Company {
   invites   Invite[]
   clients   Client[]
   suppliers Supplier[]
+  carriers  Carrier[]
 }
 
 // =============================================
@@ -143,9 +150,9 @@ model Invite {
 // Fonte de dados central para Mercadorias, Endereços e Pendências de Clientes.
 // Código gerado automaticamente (C-001, C-002...) — não inserido manualmente (RN-20).
 model Client {
-  id           String  @id @default(cuid())
-  code         String  // C-001, C-002... gerado automaticamente
-  name         String
+  id                String  @id @default(cuid())
+  code              String  // C-001, C-002... gerado automaticamente
+  name              String
   cnpj              String  // CNPJ ou CPF com máscara — obrigatório (RN-20)
   stateRegistration String? // Inscrição Estadual — null = Isento
   street            String?
@@ -170,9 +177,9 @@ model Client {
 // Fornecedor cadastrado no sistema.
 // Estrutura idêntica à de clientes — código no formato F-001, F-002...
 model Supplier {
-  id           String  @id @default(cuid())
-  code         String  // F-001, F-002... gerado automaticamente
-  name         String
+  id                String  @id @default(cuid())
+  code              String  // F-001, F-002... gerado automaticamente
+  name              String
   cnpj              String  // CNPJ ou CPF com máscara — obrigatório (RN-20)
   stateRegistration String? // Inscrição Estadual — null = Isento
   street            String?
@@ -184,6 +191,35 @@ model Supplier {
   zipCode           String?
   phone             String?
   email             String?
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+// Transportadora cadastrada pela empresa.
+// type = "empresa": dados completos (CNPJ, endereço, IE, contato, URL rastreio).
+// type = "simples": só nome — para Retirada na empresa, Táxi, Entrega própria etc.
+model Carrier {
+  id                String      @id @default(cuid())
+  type              CarrierType @default(simples)
+  name              String
+  cnpj              String?
+  stateRegistration String?
+  street            String?
+  number            String?
+  complement        String?
+  neighborhood      String?
+  city              String?
+  state             String?
+  zipCode           String?
+  phone             String?
+  email             String?
+  trackingUrl       String?
 
   companyId String
   company   Company @relation(fields: [companyId], references: [id])
