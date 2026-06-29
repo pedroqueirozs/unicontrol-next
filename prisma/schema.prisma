@@ -48,11 +48,12 @@ model Company {
 
   createdAt DateTime @default(now())
 
-  users     User[]
-  invites   Invite[]
-  clients   Client[]
-  suppliers Supplier[]
-  carriers  Carrier[]
+  users        User[]
+  invites      Invite[]
+  clients      Client[]
+  suppliers    Supplier[]
+  carriers     Carrier[]
+  goodsShipped GoodsShipped[]
 }
 
 // =============================================
@@ -222,6 +223,38 @@ model Carrier {
   phone             String?
   email             String?
   trackingUrl       String?
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+// =============================================
+// MERCADORIAS ENVIADAS
+// =============================================
+
+// Registro de cada mercadoria enviada a um cliente.
+// name/city/uf são denormalizados do cliente para exibição rápida sem join.
+// notesHistory e trackingCodes ficam em Json/String[] para arrays variáveis.
+model GoodsShipped {
+  id               String    @id @default(cuid())
+  name             String
+  documentNumber   String
+  city             String
+  uf               String
+  transporter      String
+  shippingDate     DateTime
+  deliveryForecast DateTime?
+  deliveryDate     DateTime?
+  flagged          Boolean   @default(false)
+  clientId         String
+  clientCode       String
+  trackingCodes    String[]
+  notesHistory     Json      @default("[]")
 
   companyId String
   company   Company @relation(fields: [companyId], references: [id])
