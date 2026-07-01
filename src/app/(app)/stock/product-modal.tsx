@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { X, Hash } from "lucide-react"
+import { X, Hash, ChevronDown, ChevronUp } from "lucide-react"
 import { FormInput } from "@/components/form-input"
 import type { StockProduct } from "./types"
 
@@ -13,6 +13,10 @@ const schema = z.object({
   sku: z.string().optional().nullable(),
   unit: z.string().min(1, "Unidade é obrigatória"),
   minStock: z.number().int().min(0, "Mínimo 0"),
+  description: z.string().optional().nullable(),
+  ncm: z.string().optional().nullable(),
+  price: z.number().positive("Deve ser maior que zero").optional().nullable(),
+  costPrice: z.number().positive("Deve ser maior que zero").optional().nullable(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -31,6 +35,8 @@ function formatCode(code: number | null) {
 }
 
 export function ProductModal({ open, onClose, onSave, editItem, loading }: Props) {
+  const [showFiscal, setShowFiscal] = useState(false)
+
   const {
     register,
     handleSubmit,
@@ -41,9 +47,22 @@ export function ProductModal({ open, onClose, onSave, editItem, loading }: Props
   useEffect(() => {
     if (!open) return
     if (editItem) {
-      reset({ name: editItem.name, sku: editItem.sku ?? "", unit: editItem.unit, minStock: editItem.minStock })
+      // Auto-expand fiscal section if any fiscal field is filled
+      const hasFiscal = !!(editItem.description || editItem.ncm || editItem.price || editItem.costPrice)
+      setShowFiscal(hasFiscal)
+      reset({
+        name: editItem.name,
+        sku: editItem.sku ?? "",
+        unit: editItem.unit,
+        minStock: editItem.minStock,
+        description: editItem.description ?? "",
+        ncm: editItem.ncm ?? "",
+        price: editItem.price ?? undefined,
+        costPrice: editItem.costPrice ?? undefined,
+      })
     } else {
-      reset({ name: "", sku: "", unit: "un", minStock: 0 })
+      setShowFiscal(false)
+      reset({ name: "", sku: "", unit: "un", minStock: 0, description: "", ncm: "", price: undefined, costPrice: undefined })
     }
   }, [open, editItem, reset])
 
@@ -55,10 +74,11 @@ export function ProductModal({ open, onClose, onSave, editItem, loading }: Props
       onClick={onClose}
     >
       <div
-        className="bg-card w-full md:max-w-md md:rounded-2xl rounded-t-2xl shadow-xl"
+        className="bg-card w-full md:max-w-lg md:rounded-2xl rounded-t-2xl shadow-xl max-h-[95vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-5 border-b border-border">
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-border shrink-0">
           <div>
             <h2 className="text-base font-semibold text-foreground">
               {editItem ? "Editar Produto" : "Novo Produto"}
@@ -74,8 +94,10 @@ export function ProductModal({ open, onClose, onSave, editItem, loading }: Props
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSave)} className="p-5 flex flex-col gap-4">
+        {/* Form */}
+        <form onSubmit={handleSubmit(onSave)} className="p-5 flex flex-col gap-5 overflow-y-auto">
 
+          {/* Code info when creating */}
           {!editItem && (
             <div className="flex items-center gap-2 rounded-lg bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
               <Hash size={14} className="shrink-0" />
@@ -83,44 +105,118 @@ export function ProductModal({ open, onClose, onSave, editItem, loading }: Props
             </div>
           )}
 
-          <FormInput
-            label="Nome do produto"
-            id="p-name"
-            {...register("name")}
-            error={errors.name?.message}
-          />
+          {/* ── Dados básicos ── */}
+          <div className="flex flex-col gap-4">
+            <p className="text-xs font-bold text-foreground/60 uppercase tracking-widest">Dados básicos</p>
 
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <FormInput
-                label="SKU — código do sistema antigo (opcional)"
-                id="p-sku"
-                placeholder="Ex: 2580"
-                {...register("sku")}
-                error={errors.sku?.message}
-              />
+            <FormInput
+              label="Nome do produto"
+              id="p-name"
+              {...register("name")}
+              error={errors.name?.message}
+            />
+
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <FormInput
+                  label="SKU — código do sistema antigo (opcional)"
+                  id="p-sku"
+                  placeholder="Ex: 2580"
+                  {...register("sku")}
+                  error={errors.sku?.message}
+                />
+              </div>
+              <div className="w-28">
+                <FormInput
+                  label="Unidade"
+                  id="p-unit"
+                  placeholder="un, kg, cx…"
+                  {...register("unit")}
+                  error={errors.unit?.message}
+                />
+              </div>
             </div>
-            <div className="w-28">
-              <FormInput
-                label="Unidade"
-                id="p-unit"
-                placeholder="un, kg, cx…"
-                {...register("unit")}
-                error={errors.unit?.message}
-              />
-            </div>
+
+            <FormInput
+              label="Estoque mínimo"
+              id="p-min"
+              type="number"
+              min={0}
+              {...register("minStock", { valueAsNumber: true })}
+              error={errors.minStock?.message}
+            />
           </div>
 
-          <FormInput
-            label="Estoque mínimo"
-            id="p-min"
-            type="number"
-            min={0}
-            {...register("minStock", { valueAsNumber: true })}
-            error={errors.minStock?.message}
-          />
+          {/* ── Dados para pedidos / NF-e ── */}
+          <div className="flex flex-col gap-1">
+            <button
+              type="button"
+              onClick={() => setShowFiscal((v) => !v)}
+              className="flex items-center justify-between w-full py-2 text-left group"
+            >
+              <p className="text-xs font-bold text-foreground/60 uppercase tracking-widest group-hover:text-foreground/80 transition-colors">
+                Dados para pedidos e NF-e
+              </p>
+              <span className="text-muted-foreground group-hover:text-foreground transition-colors">
+                {showFiscal ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </span>
+            </button>
 
-          <div className="flex justify-end gap-3 pt-1">
+            {showFiscal && (
+              <div className="flex flex-col gap-4 pt-2 border-t border-border">
+                <p className="text-xs text-muted-foreground">
+                  Todos os campos são opcionais. Preencha agora ou quando precisar emitir pedidos e notas fiscais.
+                </p>
+
+                <FormInput
+                  label="Descrição comercial"
+                  id="p-description"
+                  placeholder="Descrição adicional do produto…"
+                  {...register("description")}
+                  error={errors.description?.message}
+                />
+
+                <FormInput
+                  label="NCM"
+                  id="p-ncm"
+                  placeholder="00000000"
+                  maxLength={8}
+                  {...register("ncm")}
+                  error={errors.ncm?.message}
+                />
+
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <FormInput
+                      label="Preço de venda (R$)"
+                      id="p-price"
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      placeholder="0,00"
+                      {...register("price", { valueAsNumber: true })}
+                      error={errors.price?.message}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <FormInput
+                      label="Preço de custo (R$)"
+                      id="p-cost"
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      placeholder="0,00"
+                      {...register("costPrice", { valueAsNumber: true })}
+                      error={errors.costPrice?.message}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-1 border-t border-border">
             <button
               type="button"
               onClick={onClose}

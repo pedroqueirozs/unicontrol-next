@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import { toast } from "sonner"
-import { Search, X, Minus, Plus, Trash2, FileDown } from "lucide-react"
+import { Search, X, Minus, Plus, Trash2, FileDown, Clock } from "lucide-react"
 import { generateDocx, type PrintQueueItem, type CompanySender } from "@/lib/docx-generator"
 
 type SearchResult = {
@@ -47,9 +47,18 @@ export default function AddressPage() {
   const [searching, setSearching] = useState(false)
   const [queue, setQueue] = useState<QueueItem[]>([])
   const [generating, setGenerating] = useState(false)
+  const [recent, setRecent] = useState<SearchResult[]>([])
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Load recent on mount
+  useEffect(() => {
+    fetch("/api/address/recent")
+      .then((r) => r.ok ? r.json() : [])
+      .then(setRecent)
+      .catch(() => {})
+  }, [])
 
   // Fecha dropdown ao clicar fora
   useEffect(() => {
@@ -253,6 +262,49 @@ export default function AddressPage() {
           )}
         </div>
       </div>
+
+      {/* ── Recentes ── */}
+      {recent.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <Clock size={14} className="text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground">Cadastrados hoje</p>
+            <span className="text-xs text-muted-foreground">— clique para adicionar à fila</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            {recent.map((item) => {
+              const key = queueKey(item)
+              const inQueue = queue.some((q) => queueKey(q) === key)
+              const cityUf = [item.city, item.state].filter(Boolean).join(" - ")
+              return (
+                <button
+                  key={key}
+                  onClick={() => !inQueue && handleSelectResult(item)}
+                  disabled={inQueue}
+                  className={`flex flex-col gap-1.5 text-left px-4 py-3 rounded-xl border transition-colors ${
+                    inQueue
+                      ? "border-details-green/40 bg-details-green/5 cursor-default"
+                      : "border-border bg-card hover:border-ring hover:bg-muted/40 cursor-pointer"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <TypeBadge type={item.type} />
+                    {inQueue && (
+                      <span className="text-xs text-details-green font-medium">Na fila</span>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold text-foreground leading-tight line-clamp-1">
+                    {item.name}
+                  </p>
+                  {cityUf && (
+                    <p className="text-xs text-muted-foreground">{cityUf}</p>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Fila de impressão ── */}
       {queue.length > 0 && (

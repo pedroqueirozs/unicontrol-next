@@ -8,6 +8,10 @@ const schema = z.object({
   sku: z.string().optional().nullable(),
   unit: z.string().min(1, "Unidade é obrigatória"),
   minStock: z.number().int().min(0, "Estoque mínimo não pode ser negativo"),
+  description: z.string().optional().nullable(),
+  ncm: z.string().optional().nullable(),
+  price: z.number().positive().optional().nullable(),
+  costPrice: z.number().positive().optional().nullable(),
 })
 
 export async function GET() {
@@ -47,6 +51,10 @@ export async function POST(req: Request) {
       sku: parsed.data.sku ?? null,
       unit: parsed.data.unit,
       minStock: parsed.data.minStock,
+      description: parsed.data.description ?? null,
+      ncm: parsed.data.ncm ?? null,
+      price: parsed.data.price ?? null,
+      costPrice: parsed.data.costPrice ?? null,
       currentStock: 0,
       companyId: session.user.companyId,
     },

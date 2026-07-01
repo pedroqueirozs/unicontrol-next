@@ -65,6 +65,10 @@ export default function StockPage() {
     sku?: string | null
     unit: string
     minStock: number
+    description?: string | null
+    ncm?: string | null
+    price?: number | null
+    costPrice?: number | null
   }) {
     setSavingProduct(true)
     try {

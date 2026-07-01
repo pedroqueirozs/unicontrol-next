@@ -284,6 +284,12 @@ model StockProduct {
   minStock     Int     @default(0)
   currentStock Int     @default(0)
 
+  // Dados para pedidos e NF-e (todos opcionais agora)
+  description String? // observações / descrição comercial
+  ncm         String? // Nomenclatura Comum do Mercosul (8 dígitos) — obrigatório na NF-e
+  price       Float?  // preço de venda (R$)
+  costPrice   Float?  // preço de custo (R$)
+
   companyId String
   company   Company @relation(fields: [companyId], references: [id])
 

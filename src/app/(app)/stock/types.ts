@@ -1,11 +1,15 @@
 export type StockProduct = {
   id: string
-  code: number | null  // gerado automaticamente — identificador definitivo
+  code: number | null
   name: string
-  sku: string | null   // legado do sistema antigo — opcional
+  sku: string | null
   unit: string
   minStock: number
   currentStock: number
+  description: string | null
+  ncm: string | null
+  price: number | null
+  costPrice: number | null
   createdAt: string
   updatedAt: string
 }
