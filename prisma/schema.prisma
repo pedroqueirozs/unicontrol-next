@@ -54,6 +54,7 @@ model Company {
   suppliers    Supplier[]
   carriers     Carrier[]
   goodsShipped   GoodsShipped[]
+  pendings       Pending[]
   stockProducts  StockProduct[]
   stockMovements StockMovement[]
 }
@@ -257,6 +258,36 @@ model GoodsShipped {
   clientCode       String
   trackingCodes    String[]
   notesHistory     Json      @default("[]")
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+// =============================================
+// PENDÊNCIAS
+// =============================================
+
+// Pendência aberta com um cliente ou fornecedor.
+// updates: array JSON de {id, text, createdAt} — histórico imutável de atualizações.
+// status: "aberta" | "em_andamento" | "resolvida"
+// type: "client" | "supplier"
+model Pending {
+  id         String   @id @default(cuid())
+  type       String   // "client" | "supplier"
+  name       String
+  city       String?
+  document   String   // número do documento / NF que originou a pendência
+  openedAt   DateTime
+  status     String   @default("aberta")
+  updates    Json     @default("[]") // [{id, text, createdAt}]
+
+  clientId   String?  // vínculo opcional com o cadastro de clientes
+  supplierId String?  // vínculo opcional com o cadastro de fornecedores
 
   companyId String
   company   Company @relation(fields: [companyId], references: [id])
