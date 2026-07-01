@@ -3,9 +3,10 @@ import { z } from "zod"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import type { Role } from "@/generated/prisma/enums"
+import { isAdminLevel } from "@/lib/roles"
 
 const inviteSchema = z.object({
-  role: z.enum(["expedicao", "vendas"]),
+  role: z.enum(["administrativo", "expedicao", "vendas"]),
 })
 
 export async function GET() {
@@ -13,7 +14,7 @@ export async function GET() {
   if (!session?.user?.companyId) {
     return new NextResponse("Unauthorized", { status: 401 })
   }
-  if (session.user.role !== "admin") {
+  if (!isAdminLevel(session.user.role)) {
     return new NextResponse("Forbidden", { status: 403 })
   }
 
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
   if (!session?.user?.companyId) {
     return new NextResponse("Unauthorized", { status: 401 })
   }
-  if (session.user.role !== "admin") {
+  if (!isAdminLevel(session.user.role)) {
     return new NextResponse("Forbidden", { status: 403 })
   }
 

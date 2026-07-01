@@ -3,6 +3,7 @@ import { writeFile, unlink, mkdir } from "fs/promises"
 import path from "path"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { isAdminLevel } from "@/lib/roles"
 
 const ALLOWED_TYPES = ["image/png", "image/jpeg"]
 const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
@@ -12,7 +13,7 @@ export async function POST(req: Request) {
   if (!session?.user?.companyId) {
     return new NextResponse("Unauthorized", { status: 401 })
   }
-  if (session.user.role !== "admin") {
+  if (!isAdminLevel(session.user.role)) {
     return new NextResponse("Forbidden", { status: 403 })
   }
 
@@ -52,7 +53,7 @@ export async function DELETE() {
   if (!session?.user?.companyId) {
     return new NextResponse("Unauthorized", { status: 401 })
   }
-  if (session.user.role !== "admin") {
+  if (!isAdminLevel(session.user.role)) {
     return new NextResponse("Forbidden", { status: 403 })
   }
 

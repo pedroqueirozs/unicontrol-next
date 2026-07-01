@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { isAdminLevel } from "@/lib/roles"
 
 export async function GET() {
   const session = await auth()
   if (!session?.user?.companyId) {
     return new NextResponse("Unauthorized", { status: 401 })
   }
-  if (session.user.role !== "admin") {
+  if (!isAdminLevel(session.user.role)) {
     return new NextResponse("Forbidden", { status: 403 })
   }
 

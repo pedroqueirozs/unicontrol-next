@@ -5,6 +5,7 @@ import { User, Building2, Mail, ShieldCheck, Calendar, MapPin, Phone } from "luc
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
+  administrativo: "Administrativo",
   expedicao: "Expedição",
   vendas: "Vendas",
 }

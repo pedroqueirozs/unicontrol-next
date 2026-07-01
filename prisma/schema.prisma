@@ -15,6 +15,7 @@ datasource db {
 // "admin" tem acesso total. Os demais têm acesso restrito conforme RN-18.
 enum Role {
   admin
+  administrativo
   expedicao
   vendas
 }

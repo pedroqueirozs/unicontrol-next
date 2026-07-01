@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { isAdminLevel } from "@/lib/roles"
 
 const companySchema = z.object({
   name: z.string().min(1, "Nome da empresa é obrigatório"),
@@ -49,7 +50,7 @@ export async function PUT(req: Request) {
   if (!session?.user?.companyId) {
     return new NextResponse("Unauthorized", { status: 401 })
   }
-  if (session.user.role !== "admin") {
+  if (!isAdminLevel(session.user.role)) {
     return new NextResponse("Forbidden", { status: 403 })
   }
 

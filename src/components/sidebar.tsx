@@ -18,17 +18,17 @@ import { SidebarItem } from "@/components/sidebar-item"
 import type { Role } from "@/generated/prisma/enums"
 
 const NAV_ITEMS = [
-  { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", roles: ["admin"] },
-  { label: "Mercadorias", icon: PackagePlus, href: "/goods-shipped", roles: ["admin"] },
-  { label: "Financeiro", icon: DollarSign, href: "/financial", roles: ["admin"] },
-  { label: "Relatórios", icon: AlignJustify, href: "/reports", roles: ["admin"] },
+  { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", roles: ["admin", "administrativo"] },
+  { label: "Mercadorias", icon: PackagePlus, href: "/goods-shipped", roles: ["admin", "administrativo"] },
+  { label: "Financeiro", icon: DollarSign, href: "/financial", roles: ["admin", "administrativo"] },
+  { label: "Relatórios", icon: AlignJustify, href: "/reports", roles: ["admin", "administrativo"] },
   { label: "Endereços", icon: MapPin, href: "/address", roles: ["admin", "expedicao"] },
   { label: "Documentos Úteis", icon: Folder, href: "/useful-documents", roles: ["admin", "expedicao"] },
-  { label: "Pendências", icon: ClipboardList, href: "/pendencias", roles: ["admin"] },
+  { label: "Pendências", icon: ClipboardList, href: "/pendencias", roles: ["admin", "administrativo"] },
   { label: "Estoque", icon: Boxes, href: "/stock", roles: ["admin", "expedicao"] },
-  { label: "Cadastros", icon: BookUser, href: "/cadastros", roles: ["admin"] },
-  { label: "Configurações", icon: Settings, href: "/settings", roles: ["admin"] },
-  { label: "Gerenciar Usuários", icon: UserCog, href: "/manage-users", roles: ["admin"] },
+  { label: "Cadastros", icon: BookUser, href: "/cadastros", roles: ["admin", "administrativo"] },
+  { label: "Configurações", icon: Settings, href: "/settings", roles: ["admin", "administrativo"] },
+  { label: "Gerenciar Usuários", icon: UserCog, href: "/manage-users", roles: ["admin", "administrativo"] },
 ]
 
 interface SidebarProps {

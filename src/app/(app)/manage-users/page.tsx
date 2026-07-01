@@ -35,12 +35,14 @@ type Invite = {
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
+  administrativo: "Administrativo",
   expedicao: "Expedição",
   vendas: "Vendas",
 }
 
 const ROLE_COLORS: Record<string, string> = {
   admin: "bg-sidebar/15 text-sidebar",
+  administrativo: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
   expedicao: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
   vendas: "bg-green-500/10 text-green-600 dark:text-green-400",
 }
@@ -71,7 +73,7 @@ export default function ManageUsersPage() {
 
   // Gerar convite
   const [showGenModal, setShowGenModal] = useState(false)
-  const [selectedRole, setSelectedRole] = useState<"expedicao" | "vendas">("expedicao")
+  const [selectedRole, setSelectedRole] = useState<"administrativo" | "expedicao" | "vendas">("expedicao")
   const [generatingInvite, setGeneratingInvite] = useState(false)
   const [generatedLink, setGeneratedLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -437,8 +439,8 @@ export default function ManageUsersPage() {
                     <label className="text-sm font-medium text-foreground">
                       Cargo do novo membro
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(["expedicao", "vendas"] as const).map((role) => (
+                    <div className="flex flex-col gap-2">
+                      {(["administrativo", "expedicao", "vendas"] as const).map((role) => (
                         <button
                           key={role}
                           type="button"
