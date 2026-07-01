@@ -787,15 +787,15 @@ export default function GoodsShippedPage() {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Cliente</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">NF</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Cidade/UF</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Transportadora</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Envio</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Previsão</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Entregue</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Situação</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Ações</th>
+                  <th className="px-4 py-3 text-left font-semibold text-foreground/70 text-xs uppercase tracking-wide">Cliente</th>
+                  <th className="px-4 py-3 text-left font-semibold text-foreground/70 text-xs uppercase tracking-wide">NF</th>
+                  <th className="px-4 py-3 text-left font-semibold text-foreground/70 text-xs uppercase tracking-wide">Cidade/UF</th>
+                  <th className="px-4 py-3 text-left font-semibold text-foreground/70 text-xs uppercase tracking-wide">Transportadora</th>
+                  <th className="px-4 py-3 text-left font-semibold text-foreground/70 text-xs uppercase tracking-wide">Envio</th>
+                  <th className="px-4 py-3 text-left font-semibold text-foreground/70 text-xs uppercase tracking-wide">Previsão</th>
+                  <th className="px-4 py-3 text-left font-semibold text-foreground/70 text-xs uppercase tracking-wide">Entregue</th>
+                  <th className="px-4 py-3 text-left font-semibold text-foreground/70 text-xs uppercase tracking-wide">Situação</th>
+                  <th className="px-4 py-3 text-left font-semibold text-foreground/70 text-xs uppercase tracking-wide">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -817,12 +817,12 @@ export default function GoodsShippedPage() {
                       >
                         {item.name}
                       </td>
-                      <td className="px-4 py-3 font-mono text-muted-foreground">{item.documentNumber}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{item.city}/{item.uf}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{item.transporter}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{formatDate(item.shippingDate)}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{formatDate(item.deliveryForecast)}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{formatDate(item.deliveryDate)}</td>
+                      <td className="px-4 py-3 font-mono text-foreground/80">{item.documentNumber}</td>
+                      <td className="px-4 py-3 text-foreground/80">{item.city}/{item.uf}</td>
+                      <td className="px-4 py-3 text-foreground/80">{item.transporter}</td>
+                      <td className="px-4 py-3 text-foreground/80">{formatDate(item.shippingDate)}</td>
+                      <td className="px-4 py-3 text-foreground/80">{formatDate(item.deliveryForecast)}</td>
+                      <td className="px-4 py-3 text-foreground/80">{formatDate(item.deliveryDate)}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex text-xs px-2 py-0.5 rounded-full font-medium ${SITUATION_COLORS[sit] ?? ""}`}>
                           {sit}

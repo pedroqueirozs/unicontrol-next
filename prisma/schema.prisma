@@ -53,7 +53,9 @@ model Company {
   clients      Client[]
   suppliers    Supplier[]
   carriers     Carrier[]
-  goodsShipped GoodsShipped[]
+  goodsShipped   GoodsShipped[]
+  stockProducts  StockProduct[]
+  stockMovements StockMovement[]
 }
 
 // =============================================
@@ -261,6 +263,55 @@ model GoodsShipped {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+// =============================================
+// ESTOQUE
+// =============================================
+
+// Produto cadastrado no estoque.
+// code: gerado automaticamente (1, 2, 3…) por empresa — identificador definitivo.
+// sku: código legado do sistema antigo — opcional, usado só para busca de transição.
+// currentStock é sempre atualizado via transação junto ao movimento.
+model StockProduct {
+  id           String  @id @default(cuid())
+  code         Int?    // gerado automaticamente: max(code da empresa) + 1
+  name         String
+  sku          String? // legado — opcional após migrar do sistema antigo
+  unit         String
+  minStock     Int     @default(0)
+  currentStock Int     @default(0)
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+// Registro imutável de cada movimentação de estoque.
+// Campos de produto são denormalizados para preservar histórico mesmo se o produto for alterado/excluído.
+// direction: 1 = entrada, -1 = saída.
+model StockMovement {
+  id           String  @id @default(cuid())
+  productId    String
+  productName  String
+  productCode  Int?    // código automático do produto no momento do movimento
+  productSku   String? // SKU legado — pode ser null se produto não tiver SKU
+  quantity     Int
+  direction    Int
+  type         String
+  reason       String?
+  operatorName String
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  createdAt DateTime @default(now())
 
   @@index([companyId])
 }
