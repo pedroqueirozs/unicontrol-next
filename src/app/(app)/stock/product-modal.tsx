@@ -44,6 +44,9 @@ export function ProductModal({ open, onClose, onSave, editItem, loading }: Props
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) })
 
+  const nameField = register("name")
+  const unitField = register("unit")
+
   useEffect(() => {
     if (!open) return
     if (editItem) {
@@ -112,7 +115,11 @@ export function ProductModal({ open, onClose, onSave, editItem, loading }: Props
             <FormInput
               label="Nome do produto"
               id="p-name"
-              {...register("name")}
+              {...nameField}
+              onChange={(e) => {
+                e.target.value = e.target.value.toUpperCase()
+                nameField.onChange(e)
+              }}
               error={errors.name?.message}
             />
 
@@ -130,8 +137,12 @@ export function ProductModal({ open, onClose, onSave, editItem, loading }: Props
                 <FormInput
                   label="Unidade"
                   id="p-unit"
-                  placeholder="un, kg, cx…"
-                  {...register("unit")}
+                  placeholder="UN, KG, CX…"
+                  {...unitField}
+                  onChange={(e) => {
+                    e.target.value = e.target.value.toUpperCase()
+                    unitField.onChange(e)
+                  }}
                   error={errors.unit?.message}
                 />
               </div>
