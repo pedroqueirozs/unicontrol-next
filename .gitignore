@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# uploads de usuário (logos de empresa etc.)
+/public/uploads/
+
+# arquivos de importação com dados da empresa
+products-import.csv
