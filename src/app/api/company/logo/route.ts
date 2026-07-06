@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server"
-import { writeFile, unlink, mkdir } from "fs/promises"
-import path from "path"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { isAdminLevel } from "@/lib/roles"
@@ -30,15 +28,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Arquivo muito grande. Máximo 5 MB." }, { status: 400 })
   }
 
-  const ext = file.type === "image/png" ? "png" : "jpg"
-  const filename = `logo-${session.user.companyId}.${ext}`
-  const uploadDir = path.join(process.cwd(), "public", "uploads")
-
-  await mkdir(uploadDir, { recursive: true })
   const bytes = await file.arrayBuffer()
-  await writeFile(path.join(uploadDir, filename), Buffer.from(bytes))
-
-  const logoUrl = `/uploads/${filename}`
+  const base64 = Buffer.from(bytes).toString("base64")
+  const logoUrl = `data:${file.type};base64,${base64}`
 
   await prisma.company.update({
     where: { id: session.user.companyId },
@@ -55,16 +47,6 @@ export async function DELETE() {
   }
   if (!isAdminLevel(session.user.role)) {
     return new NextResponse("Forbidden", { status: 403 })
-  }
-
-  const company = await prisma.company.findUnique({
-    where: { id: session.user.companyId },
-    select: { logoUrl: true },
-  })
-
-  if (company?.logoUrl) {
-    const filePath = path.join(process.cwd(), "public", company.logoUrl)
-    await unlink(filePath).catch(() => {})
   }
 
   await prisma.company.update({
