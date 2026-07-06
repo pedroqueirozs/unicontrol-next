@@ -50,7 +50,6 @@ function maskPhone(value: string) {
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("empresa")
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
-  const [logoKey, setLogoKey] = useState(0) // cache bust
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [removingLogo, setRemovingLogo] = useState(false)
   const [savingData, setSavingData] = useState(false)
@@ -114,7 +113,6 @@ export default function SettingsPage() {
     if (res.ok) {
       const { logoUrl: newUrl } = await res.json()
       setLogoUrl(newUrl)
-      setLogoKey((k) => k + 1)
       toast.success("Logo atualizado.")
     } else {
       const json = await res.json().catch(() => null)
@@ -187,7 +185,7 @@ export default function SettingsPage() {
                 {logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={`${logoUrl}?v=${logoKey}`}
+                    src={logoUrl}
                     alt="Logo da empresa"
                     className="object-contain w-full h-full p-1"
                   />
