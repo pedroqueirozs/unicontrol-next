@@ -11,6 +11,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "UniControl",
   description: "Sistema de controle interno",
+  icons: {
+    icon: "/logo-unicontrol.svg",
+  },
 };
 
 export default function RootLayout({
