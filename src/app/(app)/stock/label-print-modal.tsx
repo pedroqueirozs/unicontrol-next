@@ -1,34 +1,50 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Printer, Download, Minus, Plus } from "lucide-react"
+import { X, Printer, Minus, Plus } from "lucide-react"
 import JsBarcode from "jsbarcode"
 import QRCode from "qrcode"
-import {
-  Document,
-  ImageRun,
-  Packer,
-  Paragraph,
-  TextRun,
-  Table,
-  TableCell,
-  TableRow,
-  WidthType,
-  BorderStyle,
-  AlignmentType,
-} from "docx"
 import type { StockProduct } from "./types"
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Tamanhos ──────────────────────────────────────────────────────────────────
 
-function dataURLToBuffer(dataURL: string): ArrayBuffer {
-  const base64 = dataURL.split(",")[1]
-  const binary = atob(base64)
-  const buf = new ArrayBuffer(binary.length)
-  const view = new Uint8Array(buf)
-  for (let i = 0; i < binary.length; i++) view[i] = binary.charCodeAt(i)
-  return buf
+type LabelSize = "small" | "medium" | "large"
+
+const SIZE_CONFIG: Record<LabelSize, {
+  label: string
+  widthMm: number   // largura da etiqueta em mm
+  namePt: number    // fonte do nome em pt
+  detailPt: number  // fonte dos detalhes em pt
+  barHMm: number    // altura do barcode/qr em mm
+  previewH: number  // altura do barcode no preview do modal (px)
+}> = {
+  small: {
+    label: "Pequena",
+    widthMm: 88,   // 2 por linha em A4
+    namePt: 7,
+    detailPt: 5.5,
+    barHMm: 11,
+    previewH: 36,
+  },
+  medium: {
+    label: "Média",
+    widthMm: 130,
+    namePt: 9,
+    detailPt: 7,
+    barHMm: 17,
+    previewH: 52,
+  },
+  large: {
+    label: "Grande",
+    widthMm: 175,
+    namePt: 12,
+    detailPt: 9,
+    barHMm: 24,
+    previewH: 72,
+  },
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function generateBarcodeDataURL(value: string): string | null {
   try {
@@ -49,114 +65,83 @@ function generateBarcodeDataURL(value: string): string | null {
   }
 }
 
-const noBorder = {
-  top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-  bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-  left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-  right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-  insideH: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-  insideV: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-}
-
-const outerBorder = {
-  top: { style: BorderStyle.DASHED, size: 4, color: "AAAAAA" },
-  bottom: { style: BorderStyle.DASHED, size: 4, color: "AAAAAA" },
-  left: { style: BorderStyle.DASHED, size: 4, color: "AAAAAA" },
-  right: { style: BorderStyle.DASHED, size: 4, color: "AAAAAA" },
-}
-
-async function generateLabelDocx(
+function openPrintWindow(
   product: StockProduct,
   quantity: number,
-  barcodeBuffer: ArrayBuffer,
-  qrBuffer: ArrayBuffer
-): Promise<Blob> {
-  const makeLabel = (): TableRow =>
-    new TableRow({
-      children: [
-        new TableCell({
-          borders: outerBorder,
-          margins: { top: 120, bottom: 120, left: 150, right: 150 },
-          children: [
-            new Paragraph({
-              children: [new TextRun({ text: product.name, bold: true, size: 28 })],
-              spacing: { after: 60 },
-            }),
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `Cód: ${product.code !== null ? String(product.code).padStart(4, "0") : "--"}`,
-                  size: 18,
-                  bold: true,
-                }),
-                ...(product.sku ? [new TextRun({ text: `   SKU: ${product.sku}`, size: 18 })] : []),
-                new TextRun({ text: "   ·   Unidade: ", size: 18 }),
-                new TextRun({ text: product.unit, size: 18, underline: {} }),
-              ],
-              spacing: { after: 100 },
-            }),
-            new Table({
-              width: { size: 100, type: WidthType.PERCENTAGE },
-              borders: noBorder,
-              rows: [
-                new TableRow({
-                  children: [
-                    new TableCell({
-                      borders: noBorder,
-                      width: { size: 80, type: WidthType.PERCENTAGE },
-                      children: [
-                        new Paragraph({
-                          children: [
-                            new ImageRun({
-                              data: barcodeBuffer,
-                              transformation: { width: 260, height: 78 },
-                              type: "png",
-                            }),
-                          ],
-                          alignment: AlignmentType.LEFT,
-                        }),
-                      ],
-                    }),
-                    new TableCell({
-                      borders: noBorder,
-                      width: { size: 20, type: WidthType.PERCENTAGE },
-                      children: [
-                        new Paragraph({
-                          children: [
-                            new ImageRun({
-                              data: qrBuffer,
-                              transformation: { width: 78, height: 78 },
-                              type: "png",
-                            }),
-                          ],
-                          alignment: AlignmentType.RIGHT,
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-              ],
-            }),
-          ],
-        }),
-      ],
-    })
+  size: LabelSize,
+  barcodeDataURL: string,
+  qrDataURL: string
+) {
+  const cfg = SIZE_CONFIG[size]
+  const codePadded = product.code !== null ? String(product.code).padStart(4, "0") : "--"
 
-  const doc = new Document({
-    sections: [
-      {
-        children: [
-          new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            borders: noBorder,
-            rows: Array.from({ length: quantity }, makeLabel),
-          }),
-        ],
-      },
-    ],
-  })
+  const labelHTML = `
+    <div class="label">
+      <p class="name">${product.name}</p>
+      <p class="detail">Cód: <strong>${codePadded}</strong>${product.sku ? ` &middot; SKU: ${product.sku}` : ""} &middot; ${product.unit}</p>
+      <div class="codes">
+        <img src="${barcodeDataURL}" class="barcode" />
+        <img src="${qrDataURL}" class="qr" />
+      </div>
+    </div>
+  `
 
-  return Packer.toBlob(doc)
+  const win = window.open("", "_blank", "width=900,height=700")
+  if (!win) return
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Etiquetas — ${product.name}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: white; }
+        .grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 3mm;
+          padding: 8mm;
+        }
+        .label {
+          width: max-content;
+          border: 0.4mm dashed #999;
+          padding: 2mm 2.5mm;
+          page-break-inside: avoid;
+        }
+        .name {
+          font-size: ${cfg.namePt}pt;
+          font-weight: bold;
+          line-height: 1.3;
+          margin-bottom: 0.8mm;
+        }
+        .detail {
+          font-size: ${cfg.detailPt}pt;
+          color: #444;
+          margin-bottom: 1.5mm;
+        }
+        .codes {
+          display: flex;
+          align-items: center;
+          gap: 2mm;
+        }
+        .barcode { height: ${cfg.barHMm}mm; width: auto; }
+        .qr { height: ${cfg.barHMm}mm; width: ${cfg.barHMm}mm; }
+        @media print {
+          .grid { padding: 5mm; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="grid">
+        ${Array.from({ length: quantity }).map(() => labelHTML).join("")}
+      </div>
+      <script>window.onload = function() { window.print(); }<\/script>
+    </body>
+    </html>
+  `)
+  win.document.close()
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -168,14 +153,13 @@ interface Props {
 
 export function LabelPrintModal({ product, onClose }: Props) {
   const [quantity, setQuantity] = useState(1)
+  const [size, setSize] = useState<LabelSize>("small")
   const [barcodeDataURL, setBarcodeDataURL] = useState<string | null>(null)
   const [qrDataURL, setQrDataURL] = useState<string | null>(null)
-  const [generatingDocx, setGeneratingDocx] = useState(false)
 
   useEffect(() => {
     if (!product) return
     setQuantity(1)
-    // Código automático (padded) é o valor do barcode; fallback para SKU em produtos legados
     const barcodeValue = product.code !== null
       ? String(product.code).padStart(4, "0")
       : (product.sku ?? "")
@@ -187,181 +171,127 @@ export function LabelPrintModal({ product, onClose }: Props) {
     }
   }, [product])
 
-  async function handleDownloadDocx() {
-    if (!product || !barcodeDataURL || !qrDataURL) return
-    setGeneratingDocx(true)
-    try {
-      const blob = await generateLabelDocx(
-        product,
-        quantity,
-        dataURLToBuffer(barcodeDataURL),
-        dataURLToBuffer(qrDataURL)
-      )
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `etiqueta-${product.sku}.docx`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch {
-      // silently fail — user can retry
-    } finally {
-      setGeneratingDocx(false)
-    }
-  }
-
-  function handlePrint() {
-    window.print()
-  }
-
   if (!product) return null
 
+  const cfg = SIZE_CONFIG[size]
   const imagesReady = !!barcodeDataURL && !!qrDataURL
+  const codePadded = product.code !== null ? String(product.code).padStart(4, "0") : "--"
 
   return (
-    <>
-      {/* Print styles */}
-      <style>{`
-        @media print {
-          body > *:not(#label-print-area) { display: none !important; }
-          #label-print-area {
-            display: block !important;
-            position: fixed;
-            inset: 0;
-            padding: 16px;
-            background: white;
-          }
-          .label-item {
-            border: 1px dashed #aaa;
-            padding: 12px;
-            margin-bottom: 10px;
-            page-break-inside: avoid;
-          }
-          .label-codes {
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            margin-top: 8px;
-          }
-        }
-        #label-print-area { display: none; }
-      `}</style>
+    <div
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 p-0 md:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-card w-full md:max-w-md md:rounded-2xl rounded-t-2xl shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-border">
+          <h2 className="text-base font-semibold text-foreground">Imprimir Etiqueta</h2>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
-      {/* Hidden print area */}
-      <div id="label-print-area">
-        {Array.from({ length: quantity }).map((_, i) => (
-          <div key={i} className="label-item">
-            <p style={{ fontWeight: "bold", fontSize: 18, margin: 0 }}>{product.name}</p>
-            <p style={{ fontSize: 13, margin: "2px 0 0" }}>
-              SKU: {product.sku} · Unidade: {product.unit}
+        <div className="p-5 flex flex-col gap-5">
+
+          {/* Size selector */}
+          <div>
+            <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide mb-2">
+              Tamanho da Etiqueta
             </p>
-            <div className="label-codes">
-              {barcodeDataURL && <img src={barcodeDataURL} alt="barcode" style={{ height: 70 }} />}
-              {qrDataURL && <img src={qrDataURL} alt="qr" style={{ height: 70, width: 70 }} />}
+            <div className="flex gap-2">
+              {(["small", "medium", "large"] as LabelSize[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSize(s)}
+                  className={`flex-1 py-2 rounded-lg border text-sm font-medium transition
+                    ${size === s
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                >
+                  {SIZE_CONFIG[s].label}
+                </button>
+              ))}
             </div>
           </div>
-        ))}
-      </div>
 
-      {/* Modal */}
-      <div
-        className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 p-0 md:p-4"
-        onClick={onClose}
-      >
-        <div
-          className="bg-card w-full md:max-w-md md:rounded-2xl rounded-t-2xl shadow-xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between p-5 border-b border-border">
-            <h2 className="text-base font-semibold text-foreground">Imprimir Etiqueta</h2>
-            <button
-              onClick={onClose}
-              className="text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="p-5 flex flex-col gap-5">
-            {/* Label preview */}
-            <div className="border border-border rounded-xl p-4 bg-white">
-              <p className="font-bold text-gray-900 text-lg leading-tight">{product.name}</p>
-              <p className="text-sm text-gray-500 mt-0.5">
-                Cód: <strong className="text-gray-700">
-                  {product.code !== null ? String(product.code).padStart(4, "0") : "--"}
-                </strong>
+          {/* Label preview */}
+          <div className="border border-border rounded-xl p-4 bg-white overflow-hidden">
+            <div className="inline-block">
+              <p className="font-bold text-gray-900 leading-tight" style={{ fontSize: cfg.namePt * 1.6 }}>
+                {product.name}
+              </p>
+              <p className="text-gray-500 mt-0.5" style={{ fontSize: cfg.detailPt * 1.6 }}>
+                Cód: <strong className="text-gray-700">{codePadded}</strong>
                 {product.sku ? ` · SKU: ${product.sku}` : ""}
                 {" · "}{product.unit}
               </p>
-              <div className="flex items-end justify-between mt-3">
+              <div className="flex items-center gap-2 mt-2">
                 {barcodeDataURL ? (
-                  <img src={barcodeDataURL} alt="barcode" className="h-16" />
+                  <img src={barcodeDataURL} alt="barcode" style={{ height: cfg.previewH }} />
                 ) : (
-                  <div className="h-16 w-44 bg-gray-100 rounded animate-pulse" />
+                  <div style={{ height: cfg.previewH }} className="w-32 bg-gray-100 rounded animate-pulse" />
                 )}
                 {qrDataURL ? (
-                  <img src={qrDataURL} alt="qr code" className="h-16 w-16" />
+                  <img src={qrDataURL} alt="qr code" style={{ height: cfg.previewH, width: cfg.previewH }} />
                 ) : (
-                  <div className="h-16 w-16 bg-gray-100 rounded animate-pulse" />
+                  <div style={{ height: cfg.previewH, width: cfg.previewH }} className="bg-gray-100 rounded animate-pulse" />
                 )}
               </div>
             </div>
+          </div>
 
-            {/* Quantity selector */}
-            <div>
-              <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide mb-2">
-                Quantidade de Etiquetas
-              </p>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-border hover:bg-muted transition text-foreground"
-                >
-                  <Minus size={16} />
-                </button>
-                <span className="text-xl font-semibold text-foreground w-10 text-center">
-                  {quantity}
-                </span>
-                <button
-                  onClick={() => setQuantity((q) => Math.min(50, q + 1))}
-                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-border hover:bg-muted transition text-foreground"
-                >
-                  <Plus size={16} />
-                </button>
-                <span className="text-sm text-muted-foreground">
-                  {quantity} etiqueta{quantity > 1 ? "s" : ""}
-                </span>
-              </div>
+          {/* Quantity selector */}
+          <div>
+            <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide mb-2">
+              Quantidade de Etiquetas
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-border hover:bg-muted transition text-foreground"
+              >
+                <Minus size={16} />
+              </button>
+              <span className="text-xl font-semibold text-foreground w-10 text-center">
+                {quantity}
+              </span>
+              <button
+                onClick={() => setQuantity((q) => Math.min(200, q + 1))}
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-border hover:bg-muted transition text-foreground"
+              >
+                <Plus size={16} />
+              </button>
+              <span className="text-sm text-muted-foreground">
+                {quantity} etiqueta{quantity > 1 ? "s" : ""}
+              </span>
             </div>
+          </div>
 
-            {/* Actions */}
-            <div className="flex gap-2 pt-1 border-t border-border justify-end flex-wrap">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 rounded-lg border border-border text-foreground text-sm hover:bg-muted transition min-h-[44px]"
-              >
-                Fechar
-              </button>
-              <button
-                onClick={handleDownloadDocx}
-                disabled={generatingDocx || !imagesReady}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-foreground text-sm hover:bg-muted transition disabled:opacity-60 min-h-[44px]"
-              >
-                <Download size={15} />
-                {generatingDocx ? "Gerando..." : "Baixar .docx"}
-              </button>
-              <button
-                onClick={handlePrint}
-                disabled={!imagesReady}
-                className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition disabled:opacity-60 min-h-[44px]"
-              >
-                <Printer size={15} /> Imprimir
-              </button>
-            </div>
+          {/* Actions */}
+          <div className="flex gap-2 pt-1 border-t border-border justify-end">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg border border-border text-foreground text-sm hover:bg-muted transition min-h-[44px]"
+            >
+              Fechar
+            </button>
+            <button
+              onClick={() => openPrintWindow(product, quantity, size, barcodeDataURL!, qrDataURL!)}
+              disabled={!imagesReady}
+              className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition disabled:opacity-60 min-h-[44px]"
+            >
+              <Printer size={15} /> Imprimir
+            </button>
           </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }
