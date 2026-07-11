@@ -164,7 +164,6 @@ export default function StockPage() {
       <div className="flex items-center gap-3">
         <Boxes size={24} className="text-primary" />
         <h1 className="text-2xl font-bold text-foreground">Estoque</h1>
-        {loading && <span className="text-sm text-muted-foreground">Carregando…</span>}
       </div>
 
       {/* Tabs */}
@@ -184,6 +183,19 @@ export default function StockPage() {
           </button>
         ))}
       </div>
+
+      {/* Loading skeleton */}
+      {loading && (
+        <div className="flex flex-col gap-4 animate-pulse">
+          <div className="flex gap-3">
+            <div className="h-12 flex-1 rounded-xl bg-muted" />
+            <div className="h-12 w-40 rounded-xl bg-muted" />
+          </div>
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-14 rounded-xl bg-muted" />
+          ))}
+        </div>
+      )}
 
       {/* Tab content */}
       {!loading && (

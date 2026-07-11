@@ -208,4 +208,7 @@
   html {
     @apply font-sans;
   }
+  button:not(:disabled) {
+    cursor: pointer;
+  }
 }
