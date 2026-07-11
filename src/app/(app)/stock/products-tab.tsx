@@ -1,8 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Package, Plus, Pencil, Trash2, Printer, AlertTriangle, Hash, Search, X } from "lucide-react"
+import { Package, Plus, Pencil, Trash2, Printer, AlertTriangle, Hash, Search, X, ChevronLeft, ChevronRight } from "lucide-react"
 import type { StockProduct } from "./types"
+
+const PAGE_SIZE = 50
 
 function formatCode(code: number | null) {
   if (code === null) return "--"
@@ -19,6 +21,7 @@ interface Props {
 
 export function ProductsTab({ products, onAdd, onEdit, onDelete, onPrint }: Props) {
   const [search, setSearch] = useState("")
+  const [page, setPage] = useState(1)
 
   const lowStock = products.filter((p) => p.currentStock < p.minStock)
 
@@ -34,6 +37,15 @@ export function ProductsTab({ products, onAdd, onEdit, onDelete, onPrint }: Prop
       )
     : products
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  function handleSearch(value: string) {
+    setSearch(value)
+    setPage(1)
+  }
+
   return (
     <div className="flex flex-col gap-5">
       {/* Toolbar */}
@@ -44,13 +56,13 @@ export function ProductsTab({ products, onAdd, onEdit, onDelete, onPrint }: Prop
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             placeholder="Buscar por nome, código ou SKU…"
             className="w-full h-12 pl-10 pr-10 rounded-xl border border-border bg-background text-base text-foreground placeholder:text-muted-foreground outline-none focus:border-ring transition-colors"
           />
           {search && (
             <button
-              onClick={() => setSearch("")}
+              onClick={() => handleSearch("")}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <X size={16} />
@@ -109,7 +121,7 @@ export function ProductsTab({ products, onAdd, onEdit, onDelete, onPrint }: Prop
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((p) => {
+                {paginated.map((p) => {
                   const isLow = p.currentStock < p.minStock
                   return (
                     <tr
@@ -152,7 +164,7 @@ export function ProductsTab({ products, onAdd, onEdit, onDelete, onPrint }: Prop
 
           {/* Mobile cards */}
           <div className="flex flex-col gap-3 md:hidden">
-            {filtered.map((p) => {
+            {paginated.map((p) => {
               const isLow = p.currentStock < p.minStock
               return (
                 <div
@@ -197,6 +209,33 @@ export function ProductsTab({ products, onAdd, onEdit, onDelete, onPrint }: Prop
               )
             })}
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-sm text-muted-foreground">
+                {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} de {filtered.length} produtos
+              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg border border-border hover:bg-muted transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="px-3 text-sm font-medium text-foreground">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg border border-border hover:bg-muted transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

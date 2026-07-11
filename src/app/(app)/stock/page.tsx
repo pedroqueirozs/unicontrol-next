@@ -186,14 +186,17 @@ export default function StockPage() {
 
       {/* Loading skeleton */}
       {loading && (
-        <div className="flex flex-col gap-4 animate-pulse">
+        <div className="flex flex-col gap-3 animate-pulse">
           <div className="flex gap-3">
             <div className="h-12 flex-1 rounded-xl bg-muted" />
-            <div className="h-12 w-40 rounded-xl bg-muted" />
+            <div className="h-12 w-44 rounded-xl bg-muted" />
           </div>
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-14 rounded-xl bg-muted" />
-          ))}
+          <div className="rounded-xl border border-border overflow-hidden">
+            <div className="h-12 bg-muted/70 border-b border-border" />
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="h-14 border-b border-border last:border-0 bg-muted/30" />
+            ))}
+          </div>
         </div>
       )}
 
