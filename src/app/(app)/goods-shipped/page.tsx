@@ -17,6 +17,8 @@ import {
   Search,
   Package,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { FormInput } from "@/components/form-input"
 
@@ -64,29 +66,30 @@ type FilterTab = "todos" | "no-prazo" | "atrasada" | "entregue"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getSituation(shipment: Shipment): SituationType {
-  if (shipment.deliveryDate) return "Entregue"
-  if (!shipment.deliveryForecast) return "—"
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const forecast = new Date(shipment.deliveryForecast)
-  forecast.setHours(0, 0, 0, 0)
-  if (today > forecast) return "Atrasada"
-  return "No Prazo"
-}
-
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "—"
-  return new Intl.DateTimeFormat("pt-BR").format(new Date(iso))
-}
-
 function toInputDate(iso: string | null | undefined): string {
   if (!iso) return ""
   return iso.split("T")[0]
 }
 
 function todayInputDate(): string {
-  return new Date().toISOString().split("T")[0]
+  const d = new Date()
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function getSituation(shipment: Shipment): SituationType {
+  if (shipment.deliveryDate) return "Entregue"
+  if (!shipment.deliveryForecast) return "—"
+  const forecast = toInputDate(shipment.deliveryForecast)
+  if (todayInputDate() > forecast) return "Atrasada"
+  return "No Prazo"
+}
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—"
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(iso))
 }
 
 const SITUATION_COLORS: Record<string, string> = {
@@ -100,6 +103,8 @@ const STATES = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS",
   "MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO",
 ]
+
+const PAGE_SIZE = 50
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
@@ -128,6 +133,7 @@ export default function GoodsShippedPage() {
 
   // UI state
   const [filter, setFilter] = useState<FilterTab>("todos")
+  const [page, setPage] = useState(1)
   const [showForm, setShowForm] = useState(false)
   const [editItem, setEditItem] = useState<Shipment | null>(null)
   const [detailItem, setDetailItem] = useState<Shipment | null>(null)
@@ -223,20 +229,22 @@ export default function GoodsShippedPage() {
     return true
   })
 
-  // Tab counts
-  const counts = {
-    todos: shipments.length,
-    "no-prazo": shipments.filter((s) => getSituation(s) === "No Prazo").length,
-    atrasada: shipments.filter((s) => getSituation(s) === "Atrasada").length,
-    entregue: shipments.filter((s) => getSituation(s) === "Entregue").length,
-  }
-
   const tabs: { key: FilterTab; label: string }[] = [
-    { key: "todos", label: `Todos (${counts.todos})` },
-    { key: "no-prazo", label: `No Prazo (${counts["no-prazo"]})` },
-    { key: "atrasada", label: `Atrasadas (${counts.atrasada})` },
-    { key: "entregue", label: `Entregues (${counts.entregue})` },
+    { key: "todos", label: "Todos" },
+    { key: "no-prazo", label: "No Prazo" },
+    { key: "atrasada", label: "Atrasadas" },
+    { key: "entregue", label: "Entregues" },
   ]
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  function handleFilterChange(tab: FilterTab) {
+    setFilter(tab)
+    setPage(1)
+  }
 
   // Client search results
   const trimmed = clientSearch.trim().toLowerCase()
@@ -760,7 +768,7 @@ export default function GoodsShippedPage() {
         {tabs.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setFilter(tab.key)}
+            onClick={() => handleFilterChange(tab.key)}
             className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition min-h-[44px] ${
               filter === tab.key
                 ? "bg-primary text-primary-foreground"
@@ -799,7 +807,7 @@ export default function GoodsShippedPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((item) => {
+                {paginated.map((item) => {
                   const sit = getSituation(item)
                   const trackingUrl = getTrackingUrl(item)
                   return (
@@ -891,7 +899,7 @@ export default function GoodsShippedPage() {
 
           {/* Mobile cards */}
           <div className="flex flex-col gap-3 md:hidden">
-            {filtered.map((item) => {
+            {paginated.map((item) => {
               const sit = getSituation(item)
               const trackingUrl = getTrackingUrl(item)
               return (
@@ -990,6 +998,34 @@ export default function GoodsShippedPage() {
               )
             })}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-sm text-muted-foreground">
+                {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} de {filtered.length} registros
+              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg border border-border hover:bg-muted transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="px-3 text-sm font-medium text-foreground">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg border border-border hover:bg-muted transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
 
