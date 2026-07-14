@@ -88,25 +88,30 @@ Documento consolidado com as regras identificadas a partir do fluxo da empresa.
 
 ## RN-18 — Roles e Permissões de Acesso
 
-O sistema possui 3 roles de usuário:
+O sistema possui 4 roles de usuário: `admin`, `administrativo`, `expedicao` e `vendas`.
 
-| Módulo | admin | expedicao | vendas |
-|---|---|---|---|
-| Dashboard | ✅ | ❌ | ❌ |
-| Gestão de Mercadorias | ✅ | ❌ | ❌ |
-| Contas a Pagar | ✅ | ❌ | ❌ |
-| Gestão de Endereços | ✅ | ✅ | ❌ |
-| Documentos Úteis | ✅ | ✅ | ❌ |
-| Pendências (Clientes + Fornecedores) | ✅ | ❌ | ❌ |
-| Relatórios | ✅ | ❌ | ❌ |
-| Configurações | ✅ | ❌ | ❌ |
-| Gerenciar Usuários | ✅ | ❌ | ❌ |
-| Cadastros (Clientes/Fornecedores) | ✅ | ❌ | ❌ |
+| Módulo | admin | administrativo | expedicao | vendas |
+|---|---|---|---|---|
+| Dashboard | ✅ | ✅ | ✅ | ✅ |
+| Mercadorias (Gestão de Mercadorias) | ✅ | ✅ | ✅ | ✅ |
+| Financeiro (Contas a Pagar) | ✅ | ✅ | ❌ | ❌ |
+| Relatórios | ✅ | ✅ | ✅ | ✅ |
+| Endereços (Gestão de Endereços) | ✅ | ✅ | ✅ | ✅ |
+| Documentos Úteis | ✅ | ✅ | ✅ | ✅ |
+| Pendências (Clientes + Fornecedores) | ✅ | ✅ | ✅ | ✅ |
+| Estoque | ✅ | ✅ | ✅ | ✅ |
+| Cadastros (Clientes/Fornecedores) | ✅ | ✅ | ✅ | ✅ |
+| Configurações | ✅ | ✅ | ❌ | ❌ |
+| Gerenciar Usuários | ✅ | ✅ | ❌ | ❌ |
 
-- O role `admin` é definido pelo proprietário do SaaS diretamente no Firestore
-- O `admin` é responsável por convidar novos membros via link com token
-- O `admin` pode promover ou rebaixar qualquer usuário da empresa
-- O role `vendas` não possui módulos ativos no momento — serão implementados futuramente
+- `admin` e `administrativo` têm acesso a todos os módulos — hoje o código trata os dois como equivalentes (`isAdminLevel()` em `src/lib/roles.ts`)
+- `expedicao` e `vendas` têm acesso aos módulos operacionais do dia a dia; ficam de fora de Financeiro, Configurações e Gerenciar Usuários
+- Decisão de 2026-07-14: com a empresa ainda pequena, `expedicao` e `vendas` passaram a ter acesso a praticamente todos os módulos, restando restritos apenas os 3 módulos administrativos/sensíveis acima
+- **Aplicação da regra é em duas camadas** (nenhuma delas é só cosmética):
+  - `src/components/sidebar.tsx` — esconde os itens de menu não permitidos (UX)
+  - `src/proxy.ts` — bloqueia de fato o acesso via URL direta, redirecionando para `/dashboard` quem tentar entrar em `/financial`, `/settings` ou `/manage-users` sem ser `admin`/`administrativo`
+- As APIs que sustentam os módulos restritos (`/api/users`, `/api/invites`, `/api/company`, `/api/company/logo`) também usam `isAdminLevel()` — a proteção não depende só da rota de página
+- O role `admin` é o único que pode promover ou rebaixar qualquer usuário da empresa
 
 ## RN-19 — Vínculo Obrigatório com Cliente em Mercadorias Enviadas
 

@@ -17,18 +17,21 @@ import {
 import { SidebarItem } from "@/components/sidebar-item"
 import type { Role } from "@/generated/prisma/enums"
 
+const ALL_ROLES = ["admin", "administrativo", "expedicao", "vendas"]
+const ADMIN_ONLY = ["admin", "administrativo"]
+
 const NAV_ITEMS = [
-  { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", roles: ["admin", "administrativo"] },
-  { label: "Mercadorias", icon: PackagePlus, href: "/goods-shipped", roles: ["admin", "administrativo"] },
-  { label: "Financeiro", icon: DollarSign, href: "/financial", roles: ["admin", "administrativo"] },
-  { label: "Relatórios", icon: AlignJustify, href: "/reports", roles: ["admin", "administrativo"] },
-  { label: "Endereços", icon: MapPin, href: "/address", roles: ["admin", "administrativo", "expedicao"] },
-  { label: "Documentos Úteis", icon: Folder, href: "/useful-documents", roles: ["admin", "administrativo", "expedicao"] },
-  { label: "Pendências", icon: ClipboardList, href: "/pendencias", roles: ["admin", "administrativo"] },
-  { label: "Estoque", icon: Boxes, href: "/stock", roles: ["admin", "administrativo", "expedicao"] },
-  { label: "Cadastros", icon: BookUser, href: "/cadastros", roles: ["admin", "administrativo"] },
-  { label: "Configurações", icon: Settings, href: "/settings", roles: ["admin", "administrativo"] },
-  { label: "Gerenciar Usuários", icon: UserCog, href: "/manage-users", roles: ["admin", "administrativo"] },
+  { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", roles: ALL_ROLES },
+  { label: "Mercadorias", icon: PackagePlus, href: "/goods-shipped", roles: ALL_ROLES },
+  { label: "Financeiro", icon: DollarSign, href: "/financial", roles: ADMIN_ONLY },
+  { label: "Relatórios", icon: AlignJustify, href: "/reports", roles: ALL_ROLES },
+  { label: "Endereços", icon: MapPin, href: "/address", roles: ALL_ROLES },
+  { label: "Documentos Úteis", icon: Folder, href: "/useful-documents", roles: ALL_ROLES },
+  { label: "Pendências", icon: ClipboardList, href: "/pendencias", roles: ALL_ROLES },
+  { label: "Estoque", icon: Boxes, href: "/stock", roles: ALL_ROLES },
+  { label: "Cadastros", icon: BookUser, href: "/cadastros", roles: ALL_ROLES },
+  { label: "Configurações", icon: Settings, href: "/settings", roles: ADMIN_ONLY },
+  { label: "Gerenciar Usuários", icon: UserCog, href: "/manage-users", roles: ADMIN_ONLY },
 ]
 
 interface SidebarProps {
