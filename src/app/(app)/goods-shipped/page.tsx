@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Share2,
 } from "lucide-react"
 import { FormInput } from "@/components/form-input"
 
@@ -153,6 +154,7 @@ export default function GoodsShippedPage() {
   const [trackingCodes, setTrackingCodes] = useState<string[]>([])
   const [trackingInput, setTrackingInput] = useState("")
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
+  const [copiedShareLink, setCopiedShareLink] = useState(false)
 
   // Notes
   const [newNoteText, setNewNoteText] = useState("")
@@ -294,12 +296,46 @@ export default function GoodsShippedPage() {
     setTimeout(() => setCopiedCode(null), 2000)
   }
 
-  // Compute tracking URL for a shipment
+  // Rastreio pelos Correios usa nossa página personalizada (consulta a API
+  // real e mostra a linha do tempo); as demais transportadoras (ex: Braspress)
+  // usam o link estático cadastrado no carrier, já preenchido com a NF.
+  function isCorreiosShipment(shipment: Shipment): boolean {
+    return shipment.transporter === "Correios"
+  }
+
+  // Compute tracking URL for a shipment's carrier (ex: Braspress) — link
+  // estático cadastrado no carrier, preenchido com a NF quando aplicável.
   function getTrackingUrl(shipment: Shipment): string | null {
     const carrier = carriers.find((c) => c.name === shipment.transporter)
     if (!carrier?.trackingUrl) return null
     if (carrier.trackingUrl.endsWith("=")) return carrier.trackingUrl + shipment.documentNumber
     return carrier.trackingUrl
+  }
+
+  // URL do botão "Rastrear": nossa página personalizada para Correios,
+  // ou o link da transportadora para as demais.
+  function getTrackButtonUrl(shipment: Shipment): string | null {
+    if (isCorreiosShipment(shipment)) {
+      return shipment.trackingCodes.length > 0 ? `/rastreio/${shipment.id}` : null
+    }
+    return getTrackingUrl(shipment)
+  }
+
+  async function copyShareLink(shipment: Shipment) {
+    const url = isCorreiosShipment(shipment)
+      ? shipment.trackingCodes.length > 0
+        ? `${window.location.origin}/rastreio/${shipment.id}`
+        : null
+      : getTrackingUrl(shipment)
+
+    if (!url) {
+      toast.error("Nenhum link de rastreio disponível para este envio.")
+      return
+    }
+
+    await navigator.clipboard.writeText(url)
+    setCopiedShareLink(true)
+    setTimeout(() => setCopiedShareLink(false), 2000)
   }
 
   // Open form for new entry
@@ -809,7 +845,7 @@ export default function GoodsShippedPage() {
               <tbody>
                 {paginated.map((item) => {
                   const sit = getSituation(item)
-                  const trackingUrl = getTrackingUrl(item)
+                  const trackUrl = getTrackButtonUrl(item)
                   return (
                     <tr
                       key={item.id}
@@ -860,9 +896,9 @@ export default function GoodsShippedPage() {
                             </button>
                           )}
 
-                          {trackingUrl && (
+                          {trackUrl && (
                             <a
-                              href={trackingUrl}
+                              href={trackUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               title="Rastrear"
@@ -901,7 +937,7 @@ export default function GoodsShippedPage() {
           <div className="flex flex-col gap-3 md:hidden">
             {paginated.map((item) => {
               const sit = getSituation(item)
-              const trackingUrl = getTrackingUrl(item)
+              const trackUrl = getTrackButtonUrl(item)
               return (
                 <div
                   key={item.id}
@@ -969,9 +1005,9 @@ export default function GoodsShippedPage() {
                       </button>
                     )}
 
-                    {trackingUrl && (
+                    {trackUrl && (
                       <a
-                        href={trackingUrl}
+                        href={trackUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-primary"
@@ -1074,51 +1110,70 @@ export default function GoodsShippedPage() {
                 >
                   <Pencil size={15} /> Editar
                 </button>
+                <button
+                  onClick={() => copyShareLink(detailItem)}
+                  className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition min-h-[44px]"
+                >
+                  {copiedShareLink ? (
+                    <>
+                      <Check size={15} className="text-details-green" /> Link copiado!
+                    </>
+                  ) : (
+                    <>
+                      <Share2 size={15} /> Copiar link de rastreio
+                    </>
+                  )}
+                </button>
               </div>
             </div>
 
             <div className="p-5 flex flex-col gap-5">
-              {/* Tracking codes */}
-              {detailItem.trackingCodes.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                    Códigos de Rastreio
-                  </p>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {detailItem.trackingCodes.map((code) => (
-                      <span
-                        key={code}
-                        className="flex items-center gap-1.5 bg-muted border border-border text-foreground text-sm font-mono px-3 py-1 rounded-full"
-                      >
-                        {code}
-                        <button
-                          onClick={() => copyCode(code)}
-                          className="text-muted-foreground hover:text-foreground flex items-center justify-center"
-                        >
-                          {copiedCode === code ? (
-                            <Check size={13} className="text-details-green" />
-                          ) : (
-                            <Copy size={13} />
-                          )}
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                  {(() => {
-                    const url = getTrackingUrl(detailItem)
-                    return url ? (
+              {/* Tracking codes + Rastrear */}
+              {(() => {
+                const trackUrl = getTrackButtonUrl(detailItem)
+                if (detailItem.trackingCodes.length === 0 && !trackUrl) return null
+                return (
+                  <div>
+                    {detailItem.trackingCodes.length > 0 && (
+                      <>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                          Códigos de Rastreio
+                        </p>
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {detailItem.trackingCodes.map((code) => (
+                            <span
+                              key={code}
+                              className="flex items-center gap-1.5 bg-muted border border-border text-foreground text-sm font-mono px-3 py-1 rounded-full"
+                            >
+                              {code}
+                              <button
+                                onClick={() => copyCode(code)}
+                                className="text-muted-foreground hover:text-foreground flex items-center justify-center"
+                              >
+                                {copiedCode === code ? (
+                                  <Check size={13} className="text-details-green" />
+                                ) : (
+                                  <Copy size={13} />
+                                )}
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    {trackUrl && (
                       <a
-                        href={url}
+                        href={trackUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
                       >
-                        <ExternalLink size={14} /> Rastrear na transportadora
+                        <ExternalLink size={14} /> Rastrear
                       </a>
-                    ) : null
-                  })()}
-                </div>
-              )}
+                    )}
+                  </div>
+                )
+              })()}
 
               {/* Notes history */}
               <div>
