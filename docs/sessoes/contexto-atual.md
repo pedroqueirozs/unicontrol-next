@@ -3,8 +3,8 @@
 > Arquivo atualizado ao final de cada sessão de trabalho.
 > Qualquer IA deve ler este arquivo para saber exatamente onde o projeto está.
 
-**Última atualização:** 2026-07-11
-**Sessão mais recente:** deploy na Vercel + melhorias no módulo de Estoque
+**Última atualização:** 2026-07-14
+**Sessão mais recente:** rastreio de encomendas pelos Correios (API real + página pública) e correção de bug de datas em Mercadorias Enviadas
 
 ---
 
@@ -89,6 +89,16 @@ Helper centralizado em `src/lib/roles.ts` → `isAdminLevel(role)`.
 - Arquivo CSV: `products-import.csv` (na raiz, ignorado pelo git)
 - Comando: `npx tsx scripts/import-products.ts` ou `--limpar` para reimportar do zero
 - SKUs preservam zeros à esquerda (ex: `00140`) para compatibilidade com sistema antigo
+
+### Rastreio de encomendas (Mercadorias Enviadas)
+- **Correios:** integração real com a API oficial (CWS / SRO-Rastro), não é só um link — `src/lib/correios.ts` autentica e consulta eventos de rastreio de verdade.
+  - Credenciais em variáveis de ambiente: `CORREIOS_USUARIO`, `CORREIOS_CODIGO_ACESSO`, `CORREIOS_CONTRATO` (já cadastradas na Vercel, Production, marcadas como Sensitive).
+  - Token é gerado e cacheado pelo próprio servidor (validade ~24h) — não precisa gerar token manualmente no dia a dia, só se as credenciais forem trocadas.
+  - Rota interna: `GET /api/correios/track?codigo=...` (autenticada).
+- **Página pública de rastreio:** `src/app/rastreio/[id]/page.tsx` — acessível **sem login** (liberada em `src/proxy.ts`, categoria `ALWAYS_PUBLIC_ROUTES`). URL usa o ID interno do envio, não o código dos Correios.
+  - Correios: mostra a linha do tempo real (origem → destino de cada evento).
+  - Outras transportadoras (ex: Braspress): mostra link externo pro site da transportadora, pré-preenchido com a NF.
+- Botão "Rastrear" e "Copiar link de rastreio" (na tabela e no modal de detalhe) decidem o destino automaticamente pela transportadora — `getTrackButtonUrl()` em `goods-shipped/page.tsx`.
 
 ---
 
