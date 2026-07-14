@@ -6,18 +6,29 @@ import { NextResponse } from "next/server"
 // que não tem Node.js completo. A validação real de senha acontece no auth.ts.
 const { auth } = NextAuth(authConfig)
 
-const PUBLIC_ROUTES = ["/login", "/register"]
+// Telas de login/registro: se já estiver logado, não fazem sentido — redireciona pro dashboard.
+const AUTH_ROUTES = ["/login", "/register"]
+
+// Rotas acessíveis sempre, estando logado ou não (ex: link de rastreio
+// compartilhado com o cliente — precisa abrir normalmente mesmo se quem
+// clicar também for um usuário interno já logado no sistema).
+const ALWAYS_PUBLIC_ROUTES = ["/rastreio"]
 
 export default auth((req) => {
   const { nextUrl, auth: session } = req
   const isLoggedIn = !!session
-  const isPublicRoute = PUBLIC_ROUTES.some((r) => nextUrl.pathname.startsWith(r))
+  const isAuthRoute = AUTH_ROUTES.some((r) => nextUrl.pathname.startsWith(r))
+  const isAlwaysPublicRoute = ALWAYS_PUBLIC_ROUTES.some((r) => nextUrl.pathname.startsWith(r))
 
-  if (isLoggedIn && isPublicRoute) {
+  if (isAlwaysPublicRoute) {
+    return NextResponse.next()
+  }
+
+  if (isLoggedIn && isAuthRoute) {
     return NextResponse.redirect(new URL("/dashboard", nextUrl))
   }
 
-  if (!isLoggedIn && !isPublicRoute) {
+  if (!isLoggedIn && !isAuthRoute) {
     return NextResponse.redirect(new URL("/login", nextUrl))
   }
 
