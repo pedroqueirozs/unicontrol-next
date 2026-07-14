@@ -12,7 +12,11 @@ export const metadata: Metadata = {
   title: "UniControl",
   description: "Sistema de controle interno",
   icons: {
-    icon: "/logo-unicontrol.svg",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/logo-unicontrol.svg", type: "image/svg+xml" },
+    ],
+    apple: "/apple-icon.png",
   },
 };
 
