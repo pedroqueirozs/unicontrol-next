@@ -72,6 +72,13 @@ export default async function TrackingPage({ params }: { params: Promise<{ id: s
     )
   }
 
+  // Só mostramos o link externo da transportadora quando não temos uma linha
+  // do tempo real pra exibir aqui mesmo (ex: Braspress, ou falha na consulta
+  // aos Correios). Pros Correios com rastreio funcionando, o link seria
+  // redundante — os eventos já aparecem na própria página.
+  const hasLiveTracking = trackings.some((t) => t.result && t.result.events.length > 0)
+  const showCarrierUrl = carrierUrl && !hasLiveTracking
+
   return (
     <div className="min-h-screen bg-muted/30 py-8 px-4 flex flex-col items-center">
       <div className="w-full max-w-lg flex flex-col gap-4">
@@ -132,7 +139,7 @@ export default async function TrackingPage({ params }: { params: Promise<{ id: s
             </div>
           </div>
 
-          {carrierUrl && (
+          {showCarrierUrl && (
             <a
               href={carrierUrl}
               target="_blank"
