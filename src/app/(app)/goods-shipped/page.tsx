@@ -134,6 +134,7 @@ export default function GoodsShippedPage() {
 
   // UI state
   const [filter, setFilter] = useState<FilterTab>("todos")
+  const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
   const [showForm, setShowForm] = useState(false)
   const [editItem, setEditItem] = useState<Shipment | null>(null)
@@ -223,12 +224,22 @@ export default function GoodsShippedPage() {
   }, [])
 
   // Filtered shipments
+  const trimmedSearch = search.trim().toLowerCase()
   const filtered = shipments.filter((s) => {
     const sit = getSituation(s)
-    if (filter === "entregue") return sit === "Entregue"
-    if (filter === "atrasada") return sit === "Atrasada"
-    if (filter === "no-prazo") return sit === "No Prazo"
-    return true
+    if (filter === "entregue" && sit !== "Entregue") return false
+    if (filter === "atrasada" && sit !== "Atrasada") return false
+    if (filter === "no-prazo" && sit !== "No Prazo") return false
+
+    if (!trimmedSearch) return true
+    return (
+      s.name.toLowerCase().includes(trimmedSearch) ||
+      s.documentNumber.toLowerCase().includes(trimmedSearch) ||
+      s.city.toLowerCase().includes(trimmedSearch) ||
+      s.transporter.toLowerCase().includes(trimmedSearch) ||
+      s.clientCode.toLowerCase().includes(trimmedSearch) ||
+      s.trackingCodes.some((code) => code.toLowerCase().includes(trimmedSearch))
+    )
   })
 
   const tabs: { key: FilterTab; label: string }[] = [
@@ -245,6 +256,11 @@ export default function GoodsShippedPage() {
 
   function handleFilterChange(tab: FilterTab) {
     setFilter(tab)
+    setPage(1)
+  }
+
+  function handleSearchChange(value: string) {
+    setSearch(value)
     setPage(1)
   }
 
@@ -799,21 +815,49 @@ export default function GoodsShippedPage() {
         </div>
       )}
 
-      {/* ── Filter tabs ─────────────────────────────────────────────────────────── */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => handleFilterChange(tab.key)}
-            className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition min-h-[44px] ${
-              filter === tab.key
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* ── Search + Filter tabs ─────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="relative flex-1 sm:max-w-sm">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Buscar por cliente, NF, cidade, transportadora ou rastreio..."
+              className="w-full h-11 pl-10 pr-10 rounded-lg border border-border bg-background text-base text-foreground placeholder:text-muted-foreground outline-none focus:border-ring transition-colors"
+            />
+            {search && (
+              <button
+                onClick={() => handleSearchChange("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+          {search && (
+            <p className="text-sm text-muted-foreground whitespace-nowrap">
+              {filtered.length} de {shipments.length} registros
+            </p>
+          )}
+        </div>
+
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => handleFilterChange(tab.key)}
+              className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition min-h-[44px] ${
+                filter === tab.key
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── Content ─────────────────────────────────────────────────────────────── */}
@@ -822,7 +866,11 @@ export default function GoodsShippedPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Package size={40} className="mx-auto mb-2 opacity-30" />
-          <p>Nenhum registro encontrado.</p>
+          {search ? (
+            <p>Nenhum registro encontrado para <strong className="text-foreground">&ldquo;{search}&rdquo;</strong>.</p>
+          ) : (
+            <p>Nenhum registro encontrado.</p>
+          )}
         </div>
       ) : (
         <>
