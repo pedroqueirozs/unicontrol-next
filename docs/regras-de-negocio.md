@@ -57,8 +57,10 @@ Documento consolidado com as regras identificadas a partir do fluxo da empresa.
 - Só é emitida após definição do transportador e valor do frete
 
 ## RN-13 — Controle de Estoque
-- Atualmente **não existe** controle formal de estoque
 - Qualquer solução deve ser **extremamente simples e intuitiva** (desafio cultural)
+- Todos os produtos foram cadastrados inicialmente com estoque zerado; a contagem real está sendo feita aos poucos, produto a produto
+- Muitos produtos cadastrados não são mais usados e permanecerão zerados por tempo indeterminado
+- **Ordenação da listagem:** produtos com estoque (`currentStock > 0`) aparecem primeiro, em ordem alfabética; produtos zerados aparecem depois, também em ordem alfabética. Isso evita que produtos sem movimento (zerados) poluam a primeira página da lista enquanto a contagem de estoque ainda está em andamento. Implementado em `src/app/api/stock/products/route.ts` (GET)
 
 ## RN-14 — Previsão de Entrega
 - A previsão de entrega deve ser **igual ou posterior à data de envio**

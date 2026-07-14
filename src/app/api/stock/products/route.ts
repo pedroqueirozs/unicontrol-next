@@ -23,6 +23,14 @@ export async function GET() {
     orderBy: { name: "asc" },
   })
 
+  // Produtos com estoque aparecem primeiro; zerados ficam no final (ambos em ordem alfabética)
+  products.sort((a, b) => {
+    const aHasStock = a.currentStock > 0
+    const bHasStock = b.currentStock > 0
+    if (aHasStock !== bHasStock) return aHasStock ? -1 : 1
+    return 0
+  })
+
   return NextResponse.json(products)
 }
 
