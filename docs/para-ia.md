@@ -4,7 +4,7 @@
 > Leia este arquivo primeiro, depois consulte os links abaixo conforme necessário.
 >
 > **Este é o repositório v2** — reconstruído do zero com Next.js + PostgreSQL.
-> O repositório original (`unicontrol/`) existe como referência, mas não deve ser modificado.
+> O repositório original (`unicontrol/`, React + Vite + Firebase) existe como referência de implementação/estilo, mas não deve ser modificado.
 
 ---
 
@@ -15,10 +15,10 @@ Desenvolvido por **Pedro Queiroz**, desenvolvedor júnior.
 
 A empresa usa o sistema para:
 - Controlar mercadorias enviadas aos clientes
-- Gerenciar contas a pagar (boletos de fornecedores)
-- Gerar etiquetas de endereço para envio de pedidos
-- Armazenar documentos úteis
-- Gerenciar usuários por setor
+- Gerenciar contas a pagar (boletos de fornecedores) — ainda não implementado nesta versão
+- Gerar etiquetas de endereço (.docx) e etiquetas de estoque (HTML) para impressão
+- Controlar estoque de produtos (entrada/saída)
+- Gerenciar usuários por setor, com controle de acesso por role
 
 ---
 
@@ -26,41 +26,31 @@ A empresa usa o sistema para:
 
 | Camada | Tecnologia |
 |---|---|
-| Framework | Next.js 14+ (App Router) |
+| Framework | Next.js 16 (App Router) |
 | Linguagem | TypeScript strict |
-| Estilo | Tailwind CSS + Shadcn/ui |
+| Estilo | Tailwind CSS v4 |
+| Componentes | Shadcn/ui (base) |
 | Tabelas | TanStack Table |
 | Formulários | React Hook Form + Zod |
-| ORM | Prisma |
-| Banco | PostgreSQL (VPS própria) |
-| Autenticação | NextAuth.js |
+| ORM | Prisma v6 |
+| Banco | PostgreSQL (VPS própria — Hostinger) |
+| Autenticação | NextAuth v5 (Credentials + JWT) |
 | Gráficos | Recharts |
 | Ícones | Lucide React |
 | Notificações | Sonner |
-| Documentos | docx (geração de .docx no browser) |
+| Documentos | `docx` (etiquetas de endereço), HTML + `jsbarcode`/`qrcode` (etiquetas de estoque) |
+| Deploy | Vercel (auto-deploy a cada push no GitHub) |
 
 ---
 
-## Modelo de Dados (Multi-tenant SaaS)
+## Modelo de Dados (Multi-tenant SaaS via Prisma/PostgreSQL)
 
-Cada empresa tem dados isolados no Firestore sob `companies/{companyId}`.
+Cada empresa (`Company`) tem dados isolados — toda tabela de negócio tem `companyId`, e toda query **deve** filtrar por ele.
 
-```
-users/{uid}                          → perfil e role do usuário
-invites/{token}                      → convites gerados pelo admin
-companies/{companyId}                → dados da empresa (nome, endereço, contato)
-companies/{companyId}/goods_shipped  → mercadorias enviadas
-companies/{companyId}/financial      → contas a pagar (NFs + boletos)
-companies/{companyId}/clients        → cadastro de clientes (fonte central de dados)
-companies/{companyId}/suppliers      → cadastro de fornecedores (fonte central de dados)
-companies/{companyId}/customers_pending → pendências com clientes
-companies/{companyId}/suppliers_pending → pendências com fornecedores
-companies/{companyId}/carriers       → transportadoras disponíveis
-```
+Tabelas principais: `Company`, `User`, `Invite`, `Client`, `Supplier`, `Carrier`, `GoodsShipped`, `Pending`, `StockProduct`, `StockMovement` (+ `Account`/`Session`/`VerificationToken`, exigidas pelo adapter do NextAuth).
 
-> A coleção `addresses` foi depreciada. Endereços agora são gerados a partir de `clients` e `suppliers`.
-
-Detalhes completos dos campos: [[arquitetura]]
+Schema completo e comentado: `prisma/schema.prisma`.
+Descrição de cada tabela, decisões e fluxos técnicos: [[arquitetura]]
 
 ---
 
@@ -69,27 +59,34 @@ Detalhes completos dos campos: [[arquitetura]]
 | Role | Acesso |
 |---|---|
 | `admin` | Todos os módulos |
-| `expedicao` | Gestão de Endereços + Documentos Úteis |
-| `vendas` | Somente perfil (módulos ainda não implementados) |
+| `administrativo` | Todos os módulos (hoje tratado como equivalente ao `admin` — `isAdminLevel()` em `src/lib/roles.ts`) |
+| `expedicao` | Todos os módulos exceto Financeiro, Configurações e Gerenciar Usuários |
+| `vendas` | Todos os módulos exceto Financeiro, Configurações e Gerenciar Usuários |
+
+Detalhes e histórico da decisão: `RN-18` em [[regras-de-negocio]].
+Aplicado em duas camadas: `src/components/sidebar.tsx` (esconde item de menu) + `src/proxy.ts` (bloqueia acesso via URL direta — a proteção real).
 
 ---
 
 ## Status dos Módulos
 
+> Tabela resumida — para o estado vivo e mais recente, sempre confira [[sessoes/contexto-atual]].
+
 | Módulo | Status | Rota |
 |---|---|---|
 | Dashboard | ✅ Pronto | `/dashboard` |
-| Gestão de Mercadorias | ✅ Pronto | `/goods-shipped` |
-| Contas a Pagar | ✅ Pronto | `/financial` |
+| Mercadorias Enviadas | ✅ Pronto | `/goods-shipped` |
 | Gestão de Endereços | ✅ Pronto | `/address` |
-| Documentos Úteis | ✅ Pronto | `/useful-documents` |
-| Autenticação | ✅ Pronto | `/login`, `/register`, `/reset-password` |
-| Perfil do Usuário | ✅ Pronto | `/profile` |
+| Estoque | ✅ Pronto | `/stock` |
 | Gerenciar Usuários | ✅ Pronto | `/manage-users` |
 | Pendências (Clientes + Fornecedores) | ✅ Pronto | `/pendencias` |
 | Cadastros (Clientes/Fornecedores) | ✅ Pronto | `/cadastros` |
-| Relatórios | 🔧 Placeholder | `/reports` |
-| Configurações | ✅ Pronto | `/settings` |
+| Configurações (dados da empresa + logo) | ✅ Pronto | `/settings` |
+| Autenticação | ✅ Pronto | `/login`, `/register` |
+| Perfil do Usuário | ✅ Pronto | `/profile` |
+| Financeiro (Contas a Pagar) | 🚧 Placeholder "em construção" | `/financial` |
+| Documentos Úteis | 🚧 Placeholder "em construção" | `/useful-documents` |
+| Relatórios | 🚧 Placeholder "em construção" | `/reports` |
 
 ---
 
@@ -97,17 +94,26 @@ Detalhes completos dos campos: [[arquitetura]]
 
 ```
 src/
-  components/     → componentes reutilizáveis
-  pages/          → uma pasta por módulo
-  hooks/          → hooks customizados (useAuth, useDashboardStats)
-  context/        → AuthContext
-  routes/         → AppRoutes, PrivateRoutes, PublicRoutes, RoleRoute
-  services/       → firebaseConfig.ts
-  utils/          → DocxGenerator, formatCurrency, formatDate, notify, situations
+  app/
+    (app)/        → páginas autenticadas (uma pasta por módulo: stock/, goods-shipped/, cadastros/, etc.)
+    (auth)/       → login, register
+    api/          → route handlers (uma pasta por recurso)
+    rastreio/     → página pública de rastreio (sem login)
+  components/     → componentes reutilizáveis (sidebar, header, form-input, etc.)
+  lib/            → prisma client, roles.ts, correios.ts, docx-generator.ts
+  generated/
+    prisma/       → client gerado pelo Prisma (gitignored, gerado a cada build)
+  types/          → tipos compartilhados
+  auth.ts         → NextAuth completo (Node runtime)
+  auth.config.ts  → NextAuth "leve" (Edge-safe — base do auth.ts e do proxy.ts)
+  proxy.ts        → equivalente ao middleware.ts (Next.js 16) — auth + controle de acesso por role
+prisma/
+  schema.prisma   → schema do banco (fonte da verdade dos dados)
+  seed.ts         → bootstrap da primeira empresa/admin
 docs/
   para-ia.md              → este arquivo (entrada para qualquer IA)
-  regras-de-negocio.md    → RN-01 a RN-18
-  arquitetura.md          → Firestore, decisões técnicas, fluxos de onboarding
+  regras-de-negocio.md    → RN-01 a RN-20+
+  arquitetura.md          → tabelas do Prisma, decisões técnicas, fluxos de onboarding
   glossario.md            → termos da empresa
   fluxos/
     vendas.md
@@ -116,16 +122,20 @@ docs/
   sessoes/
     contexto-atual.md     → estado vivo do projeto (sempre atualizado)
     YYYY-MM-DD.md         → log de cada sessão de trabalho
+  reference/
+    components/           → referência visual copiada do projeto v1 (não é código deste projeto)
+    styles/                → paleta de cores e tokens do projeto v1
 ```
 
 ---
 
 ## Como Trabalhar Neste Projeto
 
-- Sempre usar o alias `@/` para imports (ex: `@/components/Button`)
+- Sempre usar o alias `@/` para imports (ex: `@/components/sidebar`)
 - Componentes novos → `src/components/`
-- Páginas novas → `src/pages/`
-- Padrão: TypeScript strict, Tailwind, React Hook Form + Yup
+- Páginas novas → `src/app/(app)/` (App Router)
+- Rotas de API novas → `src/app/api/`
+- Padrão: TypeScript strict, Tailwind CSS v4, React Hook Form + Zod
 - Nunca fazer commit sem Pedro pedir
 - Antes de implementar qualquer módulo, ler os docs relevantes em `docs/`
 - Regras completas de trabalho: ver [[../CLAUDE]]
@@ -137,9 +147,9 @@ docs/
 | Preciso saber sobre... | Arquivo |
 |---|---|
 | Regras de negócio da empresa | [[regras-de-negocio]] |
-| Estrutura do banco de dados | [[arquitetura]] |
+| Estrutura do banco de dados (Prisma) | [[arquitetura]] |
 | Como cada setor funciona | [[fluxos/vendas]], [[fluxos/expedicao]], [[fluxos/administrativo-financeiro]] |
 | Termos específicos da empresa | [[glossario]] |
-| O que foi feito nas últimas sessões | [[sessoes/contexto-atual]] |
+| O que foi feito nas últimas sessões / estado atual | [[sessoes/contexto-atual]] |
 | Padrões visuais, cores, layout, componentes | [[ui-patterns]] |
 | Convenções de código e regras de trabalho | [[../CLAUDE]] |

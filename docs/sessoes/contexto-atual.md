@@ -3,8 +3,8 @@
 > Arquivo atualizado ao final de cada sessão de trabalho.
 > Qualquer IA deve ler este arquivo para saber exatamente onde o projeto está.
 
-**Última atualização:** 2026-07-14
-**Sessão mais recente:** rastreio de encomendas pelos Correios (API real + página pública) e correção de bug de datas em Mercadorias Enviadas
+**Última atualização:** 2026-07-16
+**Sessão mais recente:** controle de acesso por role (RN-18 revisado), correção do favicon, filtro de busca em Mercadorias Enviadas e limpeza da documentação (removidas referências ao Firebase/Firestore do projeto v1)
 
 ---
 
@@ -52,14 +52,17 @@ O sistema está **em produção** desde julho de 2026:
 
 ## Papéis (Roles)
 
+Decisão de 2026-07-16: com a empresa ainda pequena, `expedicao` e `vendas` passaram a ter acesso a quase todos os módulos.
+
 | Role | Acesso |
 |---|---|
 | `admin` | Tudo |
 | `administrativo` | Mesmo acesso do admin |
-| `expedicao` | Endereços, Documentos Úteis, Estoque |
-| `vendas` | (em definição) |
+| `expedicao` | Tudo, exceto Financeiro, Configurações e Gerenciar Usuários |
+| `vendas` | Tudo, exceto Financeiro, Configurações e Gerenciar Usuários |
 
 Helper centralizado em `src/lib/roles.ts` → `isAdminLevel(role)`.
+**Proteção real é em `src/proxy.ts`** (bloqueia acesso direto por URL aos módulos restritos) — a sidebar (`components/sidebar.tsx`) só esconde o item de menu, não é a camada de segurança. Detalhes: `RN-18` em `docs/regras-de-negocio.md`.
 
 ---
 
@@ -100,6 +103,14 @@ Helper centralizado em `src/lib/roles.ts` → `isAdminLevel(role)`.
   - Outras transportadoras (ex: Braspress): mostra link externo pro site da transportadora, pré-preenchido com a NF.
 - Botão "Rastrear" e "Copiar link de rastreio" (na tabela e no modal de detalhe) decidem o destino automaticamente pela transportadora — `getTrackButtonUrl()` em `goods-shipped/page.tsx`.
 
+### Favicon
+- O `favicon.ico` original era o placeholder padrão do `create-next-app` (nunca tinha sido trocado) — por isso aparecia o triângulo da Vercel em vez da logo em alguns navegadores/dispositivos.
+- Corrigido: `favicon.ico` (multi-tamanho) e `apple-icon.png` gerados a partir da logo real, declarados explicitamente em `src/app/layout.tsx`.
+
+### Busca em Mercadorias Enviadas
+- Filtro de texto livre em `goods-shipped/page.tsx`, combinado com as abas de situação (Todos/No Prazo/Atrasadas/Entregues).
+- Busca por nome do cliente, NF, cidade, transportadora, código do cliente ou código de rastreio.
+
 ---
 
 ## Próximos Passos Sugeridos
@@ -107,7 +118,6 @@ Helper centralizado em `src/lib/roles.ts` → `isAdminLevel(role)`.
 1. Implementar módulo **Financeiro** (Contas a Pagar)
 2. Implementar módulo **Documentos Úteis**
 3. Implementar módulo **Relatórios**
-4. Definir acesso do cargo `vendas`
 
 ---
 

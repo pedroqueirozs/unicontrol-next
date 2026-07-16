@@ -1,274 +1,80 @@
-# Arquitetura — UniControl
+# Arquitetura — UniControl (v2)
 
-Documento que descreve a estrutura de dados do Firestore, decisões arquiteturais e fluxos técnicos do sistema.
+Documento que descreve a estrutura de dados (PostgreSQL via Prisma), decisões arquiteturais e fluxos técnicos do sistema.
+
+> O schema completo e comentado está em `prisma/schema.prisma` — esse arquivo é sempre a fonte da verdade.
+> Este documento resume o *porquê* das decisões e como os módulos se conectam ao schema, sem duplicar cada campo.
 
 ---
 
 ## Modelo Multi-tenant (SaaS)
 
 O UniControl é um SaaS onde cada empresa tem seus dados isolados.
-Um usuário pertence a uma empresa e possui um role que define seu nível de acesso.
+Toda tabela de negócio tem uma coluna `companyId`, e **toda query do banco deve filtrar por ela** — é o erro mais grave que pode acontecer no sistema (ver `CLAUDE.md`).
+
+Um usuário (`User`) pertence a uma única empresa (`Company`) e possui um `role` que define seu nível de acesso (`RN-18`).
 
 ---
 
-## Estrutura do Firestore
+## Tabelas e Módulos
 
-### `companies/{companyId}`
-Representa uma empresa cadastrada no sistema.
-
-| Campo | Tipo | Descrição |
+| Tabela (Prisma) | Módulo correspondente | Observação |
 |---|---|---|
-| `name` | string | Nome da empresa |
-| `street` | string | Endereço (rua e número) |
-| `district` | string | Bairro |
-| `city` | string | Cidade |
-| `state` | string | Estado (ex: MG) |
-| `zip` | string | CEP |
-| `phone` | string | Telefone fixo |
-| `whatsapp` | string | WhatsApp |
-| `createdAt` | Timestamp | Data de criação |
-| `logoUrl` | string \| null | URL pública da logo no Firebase Storage (opcional) |
-
-> Criado manualmente pelo proprietário do SaaS (Pedro) para cada novo cliente.
-> Os campos de endereço e contato são usados como remetente na geração de etiquetas (.docx).
-> `logoUrl` é gerenciado pelo próprio admin da empresa via módulo de Configurações → aba Empresa.
-> Arquivo armazenado em `companies/{companyId}/logo` no Firebase Storage.
+| `Company` | Configurações (dados da empresa) | `logoUrl` guarda a logo como **base64 direto na coluna** — não usa filesystem nem storage externo, funciona sem estado persistente na Vercel |
+| `User` | Gerenciar Usuários / Login | Combina os campos exigidos pelo adapter do NextAuth com os campos próprios do app (`role`, `companyId`). Senha é hash bcrypt na própria tabela — não existe sistema de auth separado |
+| `Account`, `Session`, `VerificationToken` | — (infra do NextAuth) | Exigidas pelo `@auth/prisma-adapter` mesmo sem provider OAuth configurado. `Session` não é usada de fato hoje: a estratégia é `jwt`, então a sessão vive inteira no cookie assinado, não no banco |
+| `Invite` | Gerenciar Usuários → convites | Token = `cuid()`, validade de 7 dias, `used: true` após o cadastro consumir o convite |
+| `Client` / `Supplier` | Cadastros, Endereços, Mercadorias, Pendências | Fonte central de dados — outros módulos referenciam por `clientId`/`supplierId` em vez de duplicar cadastro |
+| `Carrier` | Configurações → transportadoras | `type: empresa` (dados completos + URL de rastreio) ou `simples` (só nome, ex: retirada no local) |
+| `GoodsShipped` | Mercadorias Enviadas | `name`/`city`/`uf` são denormalizados do cliente (evita join só pra exibir a tabela). `trackingCodes` é `String[]` nativo do Postgres; `notesHistory` é `Json` (array de `{id, text, createdAt}`) |
+| `Pending` | Pendências | Um único model pra cliente e fornecedor, diferenciado pelo campo `type: "client" \| "supplier"`. `updates` é `Json`, histórico imutável |
+| `StockProduct` | Estoque → produtos | `code` é sequencial por empresa (`max(code) + 1`); `sku` é o código do sistema antigo, mantido só pra busca de transição |
+| `StockMovement` | Estoque → entrada/saída | Registro imutável; campos do produto são denormalizados (`productName`, `productCode`, `productSku`) pra preservar histórico mesmo se o produto for editado ou excluído depois. `direction`: `1` = entrada, `-1` = saída |
 
 ---
 
-### `users/{uid}`
-Representa um usuário do sistema. O ID do documento é o mesmo UID do Firebase Auth.
+## Autenticação (NextAuth v5)
 
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `companyId` | string | ID da empresa à qual o usuário pertence |
-| `role` | string | Role do usuário: `admin`, `expedicao` ou `vendas` |
-| `name` | string | Nome completo |
-| `email` | string | E-mail do usuário |
-
-> O primeiro `admin` de cada empresa é criado manualmente pelo proprietário do SaaS.
-> Os demais usuários são criados via fluxo de convite.
+- Provider único: `Credentials` (e-mail + senha, hash bcrypt) — sem OAuth por enquanto.
+- Estratégia de sessão: **JWT**, não banco. O token carrega `id`, `role` e `companyId` (ver callbacks `jwt`/`session` em `src/auth.config.ts`).
+- Duas instâncias do NextAuth coexistem por causa do Edge Runtime:
+  - `src/auth.config.ts` — configuração "leve", sem Prisma/bcrypt, usada tanto como base do `auth.ts` quanto pelo `src/proxy.ts` (que roda no Edge e não pode importar Node.js completo).
+  - `src/auth.ts` — configuração completa, com o `authorize()` real (consulta Prisma + `bcrypt.compare`), usada pelas rotas de API e Server Components.
+- `src/proxy.ts` (equivalente ao antigo `middleware.ts` a partir do Next.js 16) faz duas coisas em toda requisição de página:
+  1. Redireciona não-logados para `/login` (exceto rotas sempre públicas, ex: `/rastreio/[id]`)
+  2. Bloqueia acesso direto por URL a módulos restritos (`/financial`, `/settings`, `/manage-users`) pra quem não é `admin`/`administrativo` — ver `RN-18`
 
 ---
 
-### `invites/{token}`
-Representa um convite gerado pelo admin para adicionar um novo membro à empresa.
-O token é gerado via `crypto.randomUUID()`.
+## Fluxo de Onboarding de uma Nova Empresa
 
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `companyId` | string | ID da empresa para qual o convite foi gerado |
-| `role` | string | Role que o novo usuário receberá |
-| `expiresAt` | Timestamp | Data de expiração do convite |
-| `used` | boolean | Se o convite já foi utilizado |
-| `createdAt` | Timestamp | Data de criação do convite |
-
----
-
-### `companies/{companyId}/{modulo}/{docId}`
-Todos os dados de negócio ficam aninhados sob a empresa.
-
-Exemplos:
-```
-companies/{companyId}/goods_shipped/{docId}
-companies/{companyId}/financial/{docId}
-companies/{companyId}/addresses/{docId}       ← depreciada (ver nota abaixo)
-companies/{companyId}/customers_pending/{docId}
-companies/{companyId}/suppliers_pending/{docId}
-companies/{companyId}/carriers/{docId}
-companies/{companyId}/clients/{docId}
-companies/{companyId}/suppliers/{docId}
-```
-
-> **Nota:** A coleção `addresses` foi depreciada. O módulo de Gestão de Endereços passou a usar as coleções `clients` e `suppliers` como fonte de dados. Nenhum novo documento é gravado em `addresses`.
-
----
-
-### `companies/{companyId}/goods_shipped/{docId}`
-Representa uma mercadoria enviada.
-
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `name` | string | Nome do cliente (preenchido automaticamente do cadastro) |
-| `document_number` | string | Nota fiscal ou documento de referência |
-| `city` | string | Cidade (preenchida automaticamente do cadastro) |
-| `uf` | string | Estado (preenchido automaticamente do cadastro) |
-| `transporter` | string | Nome da transportadora |
-| `shipping_date` | Timestamp | Data de envio |
-| `delivery_forecast` | Timestamp | Previsão de entrega |
-| `delivery_date` | Timestamp \| null | Data real de entrega (null se não entregue) |
-| `notes` | string \| null | Anotações livres |
-| `created_at` | Timestamp | Data de criação do registro |
-| `clientId` | string | ID do documento na coleção `clients` — **obrigatório** |
-| `clientCode` | string | Código do cliente (ex: `C-001`) — **obrigatório** |
-| `flagged` | boolean | Sinaliza o registro para atenção (opcional) |
-| `trackingCodes` | string[] | Códigos de rastreio dos Correios (opcional, múltiplos) |
-| `notesHistory` | NoteEntry[] | Histórico de observações (opcional, ver estrutura abaixo) |
-
-**Estrutura de cada item em `notesHistory`:**
-
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `id` | string | UUID gerado no cliente |
-| `text` | string | Texto da observação |
-| `createdAt` | Timestamp | Data e hora da observação |
-
-> Todo envio deve ser vinculado a um cliente do cadastro (RN-19).
-> `situation` (Entregue / No Prazo / Atrasada) é calculada no cliente, não armazenada.
-> `flagged` é ativado/desativado diretamente na tabela sem abrir formulário.
-> Observações antigas salvas no campo `notes` (string) continuam visíveis no modal como entrada legada.
-
----
-
-### `companies/{companyId}/customers_pending/{docId}`
-Representa uma pendência com um cliente.
-
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `name` | string | Nome do cliente |
-| `city` | string | Cidade |
-| `document` | string | NF ou outro documento de referência |
-| `openedAt` | Timestamp | Data de abertura da pendência |
-| `status` | string | `aberta`, `em_andamento` ou `resolvida` |
-| `createdAt` | Timestamp | Data de criação do registro |
-| `updates` | array | Lista de atualizações (ver abaixo) |
-| `clientId` | string | ID do cliente no cadastro (opcional, quando selecionado) |
-| `clientCode` | string | Código do cliente (opcional) |
-
-**Estrutura de cada item em `updates`:**
-
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `id` | string | UUID gerado no cliente (evita duplicatas no arrayUnion) |
-| `text` | string | Texto da atualização |
-| `createdAt` | Timestamp | Data e hora da atualização |
-
----
-
-### `companies/{companyId}/suppliers_pending/{docId}`
-Representa uma pendência com um fornecedor.
-
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `name` | string | Nome do fornecedor |
-| `city` | string | Cidade |
-| `document` | string | NF ou outro documento de referência |
-| `openedAt` | Timestamp | Data de abertura da pendência |
-| `status` | string | `aberta`, `em_andamento` ou `resolvida` |
-| `createdAt` | Timestamp | Data de criação do registro |
-| `updates` | array | Lista de atualizações (ver abaixo) |
-| `supplierId` | string | ID do fornecedor no cadastro (opcional, quando selecionado) |
-| `supplierCode` | string | Código do fornecedor (opcional) |
-
-**Estrutura de cada item em `updates`:**
-
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `id` | string | UUID gerado no cliente (evita duplicatas no arrayUnion) |
-| `text` | string | Texto da atualização |
-| `createdAt` | Timestamp | Data e hora da atualização |
-
-> A primeira `update` é criada automaticamente no momento da criação da pendência, a partir do campo "Descrição inicial" do formulário.
-> Data de abertura padrão = hoje (dayjs).
-
----
-
-### `companies/{companyId}/carriers/{docId}`
-Representa uma transportadora cadastrada pela empresa.
-
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `name` | string | Nome da transportadora |
-| `trackingUrl` | string \| null | URL da página de rastreio da transportadora (opcional) |
-| `createdAt` | Timestamp | Data de criação do registro |
-
-> Gerenciado pelo admin via Configurações → aba Operacional.
-> Usado como lista de opções nos módulos que envolvem escolha de transportadora.
-> `trackingUrl` é exibida como botão de atalho nas ações da tabela de Mercadorias Enviadas.
-
----
-
-### `companies/{companyId}/clients/{docId}`
-Representa um cliente cadastrado no sistema. Fonte de dados central para os módulos de Endereços, Mercadorias e Pendências de Clientes.
-
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `code` | string | Código gerado automaticamente no cadastro (ex: `C-001`, `C-002`) |
-| `name` | string | Nome / Razão Social |
-| `cnpj` | string | CNPJ ou CPF — **obrigatório**, com máscara automática |
-| `street` | string | Logradouro |
-| `number` | string | Número |
-| `complement` | string | Complemento (opcional) |
-| `neighborhood` | string | Bairro |
-| `city` | string | Cidade |
-| `state` | string | Estado (sigla, ex: SP) |
-| `zipCode` | string | CEP com máscara automática (opcional) |
-| `phone` | string | Telefone (opcional) |
-| `email` | string | E-mail (opcional) |
-| `createdAt` | Timestamp | Data de criação do registro |
-
-> Gerenciado pelo admin via módulo Cadastros → aba Clientes.
-> O código é gerado automaticamente em sequência — não é mais inserido manualmente.
-> Um mesmo CNPJ pode ter múltiplos cadastros (endereços diferentes para o mesmo cliente).
-> Busca nos módulos é feita por nome ou CNPJ/CPF.
-
----
-
-### `companies/{companyId}/suppliers/{docId}`
-Representa um fornecedor cadastrado no sistema. Fonte de dados central para os módulos de Endereços e Pendências com Fornecedores.
-
-Campos idênticos à coleção `clients`. Código gerado automaticamente no formato `F-001`, `F-002`...
-
-> Gerenciado pelo admin via módulo Cadastros → aba Fornecedores.
-
----
-
-## Roles e Permissões
-
-Definidos em `RN-16` (`docs/regras-de-negocio.md`).
-
-| Role | Rota padrão após login |
-|---|---|
-| `admin` | `/dashboard` |
-| `expedicao` | `/address` |
-| `vendas` | `/profile` |
-
----
-
-## Fluxo de Onboarding de um Novo Cliente
+Hoje é feito manualmente via script, não existe painel de super-admin:
 
 ```
-1. Pedro cria o documento companies/{companyId} no Firestore
-2. Pedro cria o usuário admin no Firebase Auth (console)
-3. Pedro cria o documento users/{uid} no Firestore com role: "admin"
-4. Pedro envia as credenciais para o proprietário da empresa
-5. Proprietário loga → acessa "Gerenciar Usuários"
-6. Proprietário gera links de convite para seus funcionários
-7. Funcionários se cadastram via /invite?token=xxx
+1. Pedro roda `npm run seed` com as variáveis SEED_* no .env apontando pra nova empresa/admin
+   (o script recusa rodar se já existir alguma Company no banco — só serve pro bootstrap inicial)
+2. Pedro envia e-mail/senha do admin criado para o proprietário da empresa
+3. Proprietário loga → acessa "Gerenciar Usuários"
+4. Proprietário gera convites para seus funcionários (define o role de cada um)
+5. Funcionários se cadastram via /register?token=xxx
 ```
-
----
 
 ## Fluxo de Convite de Novo Membro
 
 ```
-Admin acessa "Gerenciar Usuários"
+Admin/administrativo acessa "Gerenciar Usuários"
       ↓
-Clica em "Convidar membro" → seleciona o role
+Gera convite → escolhe o role (administrativo, expedicao ou vendas — não dá pra convidar como admin)
       ↓
-Sistema cria invites/{token} com validade de 7 dias
+POST /api/invites cria um Invite com validade de 7 dias
       ↓
-Admin copia o link gerado e envia ao funcionário (WhatsApp, e-mail)
+Admin copia o link (/register?token=xxx) e envia ao funcionário
       ↓
-Funcionário acessa /invite?token=xxx
+Funcionário abre o link, preenche nome, e-mail e senha
       ↓
-Sistema valida: token existe + não foi usado + não expirou
+POST /api/auth/register valida: token existe + não usado + não expirado + e-mail ainda livre
       ↓
-Funcionário preenche nome, e-mail e senha
-      ↓
-Sistema cria conta no Firebase Auth
-Sistema cria users/{uid} com companyId e role do convite
-Sistema marca invites/{token} como used: true
+Em uma transação: cria o User (senha hasheada) + marca o Invite como used: true
       ↓
 Funcionário é redirecionado para o login
 ```
@@ -277,14 +83,17 @@ Funcionário é redirecionado para o login
 
 ## Decisões Arquiteturais
 
-### Por que Firestore e não Firebase Auth Custom Claims para roles?
-Custom Claims do Firebase Auth exigem Firebase Admin SDK (backend/Cloud Functions).
-Usar Firestore para guardar roles evita essa dependência, mantendo o projeto 100% client-side.
+### Por que JWT em vez de sessão no banco, se a tabela `Session` existe?
+O `@auth/prisma-adapter` exige as tabelas `Account`/`Session`/`VerificationToken` para funcionar mesmo quando não são usadas na prática. Com `session.strategy: "jwt"`, a sessão real vive no cookie assinado (`AUTH_SECRET`) — a tabela `Session` fica ociosa hoje. Isso implica um detalhe importante: **remover um usuário não invalida sessões já abertas na hora** (o token continua válido até expirar, ~30 dias por padrão) — ver `RN-17`.
 
-### Por que o token do convite é gerado no cliente?
-`crypto.randomUUID()` é nativo no browser e gera UUIDs criptograficamente seguros (versão 4).
-Para o volume de usuários esperado, a probabilidade de colisão é desprezível.
+### Por que denormalizar campos em vez de só usar relations?
+`GoodsShipped.name/city/uf` e os campos de produto em `StockMovement` são cópias no momento do registro, não referências vivas. Isso evita um join extra só pra listar a tabela, e principalmente **preserva o histórico**: se um cliente for editado ou um produto excluído, os registros antigos continuam mostrando os dados de quando o evento aconteceu.
 
-### Por que o primeiro admin é criado manualmente?
-Para os 3 clientes iniciais, o custo de criar manualmente é mínimo.
-Implementar um painel de super-admin completo seria over-engineering nesse estágio.
+### Por que `notesHistory`/`updates` são `Json` em vez de tabelas separadas?
+São listas pequenas, de tamanho previsível, sempre lidas/escritas junto com o registro pai (nunca precisam ser filtradas ou paginadas independentemente). Uma tabela relacional separada seria overhead sem benefício real no volume de dados esperado.
+
+### Por que o primeiro admin de cada empresa é criado via script (seed)?
+Para o volume de clientes esperado, o custo de rodar `npm run seed` manualmente é mínimo. Implementar um painel de super-admin completo seria over-engineering nesse estágio (mesmo raciocínio do projeto anterior, ainda válido).
+
+### Por que o token do convite é `cuid()` e não `crypto.randomUUID()`?
+O projeto anterior gerava o token no cliente (browser). Aqui o convite é criado inteiramente no servidor (`POST /api/invites`), então usar o gerador padrão do Prisma (`cuid()`) é mais simples e já garante unicidade — não há motivo pra usar uma função diferente só pra gerar o token.

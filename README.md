@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# UniControl
 
-## Getting Started
+Aplicação web para automatizar processos internos da empresa (mercadorias enviadas, estoque, cadastros de clientes/fornecedores, endereços, pendências, gerenciamento de usuários). Multi-tenant: cada empresa cadastrada tem seus dados isolados.
 
-First, run the development server:
+Esta é a **v2** do projeto — reconstruída do zero com Next.js + PostgreSQL. O repositório anterior (`unicontrol/`, React + Vite + Firebase) fica como referência de implementação e não deve ser usado em produção.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Documentação completa do projeto (regras de negócio, arquitetura, fluxos, contexto para IA): [`docs/`](docs/para-ia.md).
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · Prisma v6 · PostgreSQL · NextAuth v5
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Rodando localmente
 
-## Learn More
+Pré-requisitos: Node.js 20+, acesso a um banco PostgreSQL (local ou remoto).
 
-To learn more about Next.js, take a look at the following resources:
+1. Instale as dependências:
+   ```bash
+   npm install
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. Crie um arquivo `.env` na raiz com as variáveis abaixo (peça os valores reais de produção a quem já tem acesso — **nunca commitar este arquivo**):
+   ```bash
+   DATABASE_URL="postgresql://usuario:senha@host:5432/banco"
+   AUTH_SECRET="gerar com: npx auth secret"
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   # Só necessário para rodar `npm run seed` (bootstrap da primeira empresa/admin)
+   SEED_COMPANY_NAME=""
+   SEED_COMPANY_CITY=""
+   SEED_COMPANY_STATE=""
+   SEED_ADMIN_NAME=""
+   SEED_ADMIN_EMAIL=""
+   SEED_ADMIN_PASSWORD=""
 
-## Deploy on Vercel
+   # Só necessário para o módulo de rastreio dos Correios (src/lib/correios.ts)
+   CORREIOS_USUARIO=""
+   CORREIOS_CODIGO_ACESSO=""
+   CORREIOS_CONTRATO=""
+   CORREIOS_DR=""
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3. Aplique as migrations no banco:
+   ```bash
+   npx prisma migrate dev
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. (Opcional, só em banco vazio) Crie a primeira empresa e o usuário admin:
+   ```bash
+   npm run seed
+   ```
+
+5. Rode o servidor de desenvolvimento:
+   ```bash
+   npm run dev
+   ```
+   Acesse [http://localhost:3000](http://localhost:3000).
+
+## Scripts
+
+| Comando | O que faz |
+|---|---|
+| `npm run dev` | Servidor de desenvolvimento |
+| `npm run build` | `prisma generate` + build de produção |
+| `npm run start` | Sobe o build de produção |
+| `npm run lint` | ESLint |
+| `npm run seed` | Cria a primeira empresa + usuário admin (`prisma/seed.ts`) |
+| `npx prisma migrate dev` | Aplica migrations pendentes em desenvolvimento |
+| `npx prisma studio` | Interface visual para explorar o banco |
+
+## Deploy
+
+- **Frontend/API:** Vercel, deploy automático a cada push na branch `main` do GitHub.
+- **Banco de dados:** PostgreSQL em VPS própria (Hostinger) — não gerenciado pela Vercel.
+- As variáveis de ambiente de produção (incluindo as credenciais dos Correios, marcadas como *Sensitive*) ficam configuradas diretamente no painel da Vercel.
+- `src/generated/prisma` é gitignored e gerado a cada build (`prisma generate` roda antes do `next build`, ver `package.json`).
