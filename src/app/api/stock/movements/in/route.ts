@@ -38,31 +38,33 @@ export async function POST(req: Request) {
 
   // Todo o lote é registrado em uma única transação: se um item falhar, nenhum
   // é aplicado — evita entrada parcial (e duplicação em caso de nova tentativa).
-  await prisma.$transaction(
-    items.flatMap((item) => {
+  // Interativa (em vez de array de promises) porque cada movimento precisa do
+  // saldo resultante do UPDATE anterior para gravar previousStock/newStock.
+  await prisma.$transaction(async (tx) => {
+    for (const item of items) {
       const product = productById.get(item.productId)!
-      return [
-        prisma.stockMovement.create({
-          data: {
-            productId: item.productId,
-            productName: product.name,
-            productCode: product.code ?? null,
-            productSku: product.sku ?? null,
-            quantity: item.quantity,
-            direction: 1,
-            type: "entrada",
-            reason: reason || null,
-            operatorName,
-            companyId,
-          },
-        }),
-        prisma.stockProduct.update({
-          where: { id: item.productId },
-          data: { currentStock: { increment: item.quantity } },
-        }),
-      ]
-    })
-  )
+      const updated = await tx.stockProduct.update({
+        where: { id: item.productId },
+        data: { currentStock: { increment: item.quantity } },
+      })
+      await tx.stockMovement.create({
+        data: {
+          productId: item.productId,
+          productName: product.name,
+          productCode: product.code ?? null,
+          productSku: product.sku ?? null,
+          quantity: item.quantity,
+          direction: 1,
+          type: "entrada",
+          reason: reason || null,
+          operatorName,
+          previousStock: updated.currentStock - item.quantity,
+          newStock: updated.currentStock,
+          companyId,
+        },
+      })
+    }
+  })
 
   return new NextResponse(null, { status: 204 })
 }

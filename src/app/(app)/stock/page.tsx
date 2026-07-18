@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 import { Boxes, PackagePlus, PackageMinus, History } from "lucide-react"
-import type { StockProduct, StockMovement } from "./types"
+import type { StockProduct } from "./types"
 import { ProductsTab } from "./products-tab"
 import { MovementInTab } from "./movement-in-tab"
 import { MovementOutTab } from "./movement-out-tab"
@@ -24,7 +24,6 @@ const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
 export default function StockPage() {
   const [activeTab, setActiveTab] = useState<Tab>("saida")
   const [products, setProducts] = useState<StockProduct[]>([])
-  const [movements, setMovements] = useState<StockMovement[]>([])
   const [loading, setLoading] = useState(true)
 
   // Product modal
@@ -42,21 +41,12 @@ export default function StockPage() {
   const [adjustProduct, setAdjustProduct] = useState<StockProduct | null>(null)
   const [savingAdjust, setSavingAdjust] = useState(false)
 
-  // Reverse (estorno) confirm
-  const [confirmReverse, setConfirmReverse] = useState<StockMovement | null>(null)
-  const [reversing, setReversing] = useState(false)
-
   // Load data
   const loadData = useCallback(async () => {
     try {
-      const [pr, mr] = await Promise.all([
-        fetch("/api/stock/products"),
-        fetch("/api/stock/movements"),
-      ])
-      if (!pr.ok || !mr.ok) throw new Error()
-      const [productsData, movementsData] = await Promise.all([pr.json(), mr.json()])
-      setProducts(productsData)
-      setMovements(movementsData)
+      const res = await fetch("/api/stock/products")
+      if (!res.ok) throw new Error()
+      setProducts(await res.json())
     } catch {
       toast.error("Erro ao carregar os dados.")
     } finally {
@@ -195,24 +185,6 @@ export default function StockPage() {
     }
   }
 
-  // Reverse (estorno) a movement
-  async function handleReverseMovement(movement: StockMovement) {
-    setReversing(true)
-    try {
-      const res = await fetch(`/api/stock/movements/${movement.id}/reverse`, { method: "POST" })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        toast.error(body.error ?? "Erro ao estornar lançamento.")
-        return
-      }
-      await loadData()
-      setConfirmReverse(null)
-      toast.success("Lançamento estornado com sucesso.")
-    } finally {
-      setReversing(false)
-    }
-  }
-
   return (
     <div className="flex flex-col gap-5 p-4 md:p-6">
       {/* Header */}
@@ -275,7 +247,7 @@ export default function StockPage() {
             <MovementOutTab products={products} onRegisterBatch={handleMovementOutBatch} />
           )}
           {activeTab === "historico" && (
-            <HistoryTab movements={movements} onReverse={(m) => setConfirmReverse(m)} />
+            <HistoryTab onReversed={loadData} />
           )}
         </div>
       )}
@@ -357,41 +329,6 @@ export default function StockPage() {
                 </div>
               </>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Confirm reverse (estorno) */}
-      {confirmReverse && (
-        <div
-          className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 p-0 md:p-4"
-          onClick={() => setConfirmReverse(null)}
-        >
-          <div
-            className="bg-card w-full md:max-w-sm md:rounded-2xl rounded-t-2xl shadow-xl p-5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="font-semibold text-foreground mb-1">Estornar movimentação?</h2>
-            <p className="text-sm text-muted-foreground mb-5">
-              A {confirmReverse.type === "entrada" ? "entrada" : "saída"} de{" "}
-              <strong className="text-foreground">{confirmReverse.quantity} {confirmReverse.productName}</strong> será
-              revertida e uma nova movimentação de estorno será registrada no histórico.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleReverseMovement(confirmReverse)}
-                disabled={reversing}
-                className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition min-h-[44px] disabled:opacity-50"
-              >
-                {reversing ? "Estornando..." : "Estornar"}
-              </button>
-              <button
-                onClick={() => setConfirmReverse(null)}
-                className="px-4 py-2.5 rounded-lg border border-border text-foreground text-sm hover:bg-muted transition min-h-[44px]"
-              >
-                Cancelar
-              </button>
-            </div>
           </div>
         </div>
       )}

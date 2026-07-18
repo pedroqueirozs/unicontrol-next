@@ -64,9 +64,9 @@ export async function POST(req: Request) {
       for (const item of items) {
         const product = productById.get(item.productId)!
 
-        // Conditional UPDATE: only decrements if there's still enough stock at the
-        // moment of writing. If a concurrent saída already consumed it, count === 0
-        // and we abort the whole batch instead of allowing negative stock.
+        // Conditional UPDATE: só decrementa se ainda houver estoque suficiente no
+        // momento da escrita. Se uma saída concorrente já consumiu, count === 0
+        // e abortamos o lote inteiro em vez de permitir estoque negativo.
         const result = await tx.stockProduct.updateMany({
           where: { id: item.productId, currentStock: { gte: item.quantity } },
           data: { currentStock: { decrement: item.quantity } },
@@ -74,6 +74,10 @@ export async function POST(req: Request) {
         if (result.count === 0) {
           throw new InsufficientStockError(product.name, product.unit)
         }
+
+        // updateMany não retorna a linha atualizada — busca o saldo resultante
+        // pra gravar previousStock/newStock no movimento (mesma transação).
+        const updated = await tx.stockProduct.findUniqueOrThrow({ where: { id: item.productId } })
 
         await tx.stockMovement.create({
           data: {
@@ -86,6 +90,8 @@ export async function POST(req: Request) {
             type: "saida",
             reason: reason || null,
             operatorName,
+            previousStock: updated.currentStock + item.quantity,
+            newStock: updated.currentStock,
             companyId,
           },
         })

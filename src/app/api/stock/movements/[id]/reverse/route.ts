@@ -58,6 +58,7 @@ export async function POST(
         throw new Error("ALREADY_REVERSED")
       }
 
+      let newStock: number
       if (reversalDirection < 0) {
         // Estornando uma entrada: mesmo guard condicional da saída normal —
         // evita ficar negativo se o produto já foi consumido depois da entrada errada.
@@ -68,11 +69,14 @@ export async function POST(
         if (result.count === 0) {
           throw new Error("INSUFFICIENT_STOCK")
         }
+        const updated = await tx.stockProduct.findUniqueOrThrow({ where: { id: product.id } })
+        newStock = updated.currentStock
       } else {
-        await tx.stockProduct.update({
+        const updated = await tx.stockProduct.update({
           where: { id: product.id },
           data: { currentStock: { increment: original.quantity } },
         })
+        newStock = updated.currentStock
       }
 
       return tx.stockMovement.create({
@@ -89,6 +93,8 @@ export async function POST(
             : `Estorno do lançamento de ${original.createdAt.toLocaleDateString("pt-BR")}`,
           operatorName: session.user.name ?? "Desconhecido",
           reversalOfId: original.id,
+          previousStock: newStock - reversalDirection * original.quantity,
+          newStock,
           companyId,
         },
       })
