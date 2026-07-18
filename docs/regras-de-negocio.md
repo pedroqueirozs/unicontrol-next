@@ -144,6 +144,14 @@ O histórico de movimentações (`StockMovement`) nunca é editado ou apagado di
 - O sistema calcula a diferença automaticamente e registra uma movimentação `ajuste`, com o valor anterior e o novo valor (`previousStock`/`newStock`)
 - Disponível para todos os papéis com acesso ao Estoque (mesmo nível de acesso de Entrada/Saída — ver RN-18), sem restrição adicional
 
+## RN-22 — Bloqueio de Exclusão de Produto com Estoque
+
+- Um produto **não pode ser excluído** do cadastro enquanto `currentStock > 0`
+- Motivo: a mercadoria continua existindo fisicamente no estoque; excluir o cadastro faria esse número sumir do sistema sem nenhum registro de saída, perdendo o rastreamento de algo que ainda está lá
+- O bloqueio é validado no servidor (`DELETE /api/stock/products/[id]`) — não é só uma restrição visual
+- Quando bloqueado, o modal de exclusão mostra a quantidade parada e oferece diretamente o atalho para **Ajustar estoque** (RN-21), já que zerar via ajuste é o caminho esperado antes de excluir um produto descontinuado
+- Produto com estoque zerado (`currentStock === 0`) continua sendo excluído normalmente, com confirmação simples
+
 ---
 
 ## Problemas e Oportunidades de Melhoria

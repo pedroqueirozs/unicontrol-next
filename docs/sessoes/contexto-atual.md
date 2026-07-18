@@ -4,7 +4,7 @@
 > Qualquer IA deve ler este arquivo para saber exatamente onde o projeto está.
 
 **Última atualização:** 2026-07-18
-**Sessão mais recente:** conferência crítica do módulo de Estoque (3 condições de corrida corrigidas) + duas funcionalidades novas de correção: Estorno de lançamento e Ajuste de contagem física — testadas por Pedro em produção
+**Sessão mais recente:** conferência crítica do módulo de Estoque (3 condições de corrida corrigidas), duas funcionalidades novas de correção (Estorno de lançamento e Ajuste de contagem física) e bloqueio de exclusão de produto com estoque — tudo testado por Pedro em produção
 
 ---
 
@@ -121,6 +121,7 @@ Helper centralizado em `src/lib/roles.ts` → `isAdminLevel(role)`.
 - **Estorno** (`POST /api/stock/movements/[id]/reverse`): reverte um lançamento de entrada/saída errado, criando um movimento `type: "estorno"` vinculado (`reversalOfId`) e marcando o original como `reversedAt`. Qualquer operador estorna dentro de 24h; depois disso, só `admin`/`administrativo` (`isAdminLevel()`). Botão "Estornar" na aba Histórico.
 - **Ajuste** (`POST /api/stock/movements/adjust`): corrige o `currentStock` para bater com a contagem física, registrando um movimento `type: "ajuste"` com `previousStock`/`newStock` e motivo obrigatório. Livre para todos os papéis (mesmo nível de Entrada/Saída). Ícone "Ajustar estoque" por produto na aba Estoque.
 - Detalhes: `docs/sessoes/2026-07-18.md` (Parte 2) e `RN-21` em `docs/regras-de-negocio.md`.
+- **Bloqueio de exclusão com estoque:** produto com `currentStock > 0` não pode ser excluído (`DELETE /api/stock/products/[id]` retorna 422) — o modal de exclusão detecta isso e oferece "Ajustar estoque" em vez de excluir. Produto zerado exclui normal. Detalhes: `docs/sessoes/2026-07-18.md` (Parte 3) e `RN-22`.
 
 ---
 
