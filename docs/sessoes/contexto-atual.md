@@ -3,8 +3,8 @@
 > Arquivo atualizado ao final de cada sessão de trabalho.
 > Qualquer IA deve ler este arquivo para saber exatamente onde o projeto está.
 
-**Última atualização:** 2026-07-16
-**Sessão mais recente:** controle de acesso por role (RN-18 revisado), correção do favicon, filtro de busca em Mercadorias Enviadas e limpeza da documentação (removidas referências ao Firebase/Firestore do projeto v1)
+**Última atualização:** 2026-07-18
+**Sessão mais recente:** conferência crítica do módulo de Estoque — corrigidas 3 condições de corrida que ameaçavam a integridade dos dados durante a contagem de estoque em andamento (saída podia ficar negativa, código de produto podia duplicar e confundir o bipador, entrada em lote não era atômica)
 
 ---
 
@@ -110,6 +110,12 @@ Helper centralizado em `src/lib/roles.ts` → `isAdminLevel(role)`.
 ### Busca em Mercadorias Enviadas
 - Filtro de texto livre em `goods-shipped/page.tsx`, combinado com as abas de situação (Todos/No Prazo/Atrasadas/Entregues).
 - Busca por nome do cliente, NF, cidade, transportadora, código do cliente ou código de rastreio.
+
+### Integridade do Estoque (2026-07-18)
+- **Saída de estoque** (`movements/out/route.ts`) usa `updateMany` condicional (`WHERE currentStock >= quantidade`) dentro de transação — evita estoque negativo em saídas simultâneas do mesmo produto.
+- **Entrada de estoque** (`movements/in/route.ts`) aceita o lote inteiro (`items: []`) numa única transação atômica, mesmo padrão da saída — antes era uma requisição por produto em loop, sem atomicidade entre itens.
+- **Código do produto** tem constraint única no banco (`@@unique([companyId, code])`, migration `20260718033248_stock_product_code_unique`) — sem isso, dois cadastros simultâneos podiam gerar o mesmo código e o bipador de Entrada/Saída resolveria pro produto errado. `POST /api/stock/products` recalcula e tenta de novo automaticamente em caso de colisão.
+- Detalhes completos da investigação e das correções: `docs/sessoes/2026-07-18.md`.
 
 ---
 
