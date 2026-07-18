@@ -46,6 +46,8 @@ export function ProductModal({ open, onClose, onSave, editItem, loading }: Props
 
   const nameField = register("name")
   const unitField = register("unit")
+  const skuField = register("sku")
+  const descriptionField = register("description")
 
   useEffect(() => {
     if (!open) return
@@ -129,7 +131,11 @@ export function ProductModal({ open, onClose, onSave, editItem, loading }: Props
                   label="SKU — código do sistema antigo (opcional)"
                   id="p-sku"
                   placeholder="Ex: 2580"
-                  {...register("sku")}
+                  {...skuField}
+                  onChange={(e) => {
+                    e.target.value = e.target.value.toUpperCase()
+                    skuField.onChange(e)
+                  }}
                   error={errors.sku?.message}
                 />
               </div>
@@ -183,7 +189,11 @@ export function ProductModal({ open, onClose, onSave, editItem, loading }: Props
                   label="Descrição comercial"
                   id="p-description"
                   placeholder="Descrição adicional do produto…"
-                  {...register("description")}
+                  {...descriptionField}
+                  onChange={(e) => {
+                    e.target.value = e.target.value.toUpperCase()
+                    descriptionField.onChange(e)
+                  }}
                   error={errors.description?.message}
                 />
 

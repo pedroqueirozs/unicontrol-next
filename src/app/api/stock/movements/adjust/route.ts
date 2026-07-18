@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma"
 const schema = z.object({
   productId: z.string().min(1),
   countedStock: z.number().int().min(0, "Quantidade contada não pode ser negativa"),
-  reason: z.string().min(1, "Informe o motivo do ajuste"),
+  // Motivo em caixa alta pra manter o padrão do módulo de Estoque.
+  reason: z.string().min(1, "Informe o motivo do ajuste").transform((v) => v.trim().toUpperCase()),
 })
 
 export async function POST(req: Request) {

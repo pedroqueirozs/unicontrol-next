@@ -4,12 +4,18 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@/generated/prisma/client"
 
+// Nome, SKU, unidade e descrição são normalizados em caixa alta pra manter o
+// padrão do módulo de Estoque — vale só pra cadastros novos/editados a partir
+// daqui, dados já existentes não são alterados retroativamente.
+const upper = (v: string) => v.trim().toUpperCase()
+const upperNullable = (v: string | null | undefined) => (v ? upper(v) : v ?? null)
+
 const schema = z.object({
-  name: z.string().min(1, "Nome é obrigatório"),
-  sku: z.string().optional().nullable(),
-  unit: z.string().min(1, "Unidade é obrigatória"),
+  name: z.string().min(1, "Nome é obrigatório").transform(upper),
+  sku: z.string().optional().nullable().transform(upperNullable),
+  unit: z.string().min(1, "Unidade é obrigatória").transform(upper),
   minStock: z.number().int().min(0, "Estoque mínimo não pode ser negativo"),
-  description: z.string().optional().nullable(),
+  description: z.string().optional().nullable().transform(upperNullable),
   ncm: z.string().optional().nullable(),
   price: z.number().positive().optional().nullable(),
   costPrice: z.number().positive().optional().nullable(),

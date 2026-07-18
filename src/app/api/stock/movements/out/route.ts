@@ -10,7 +10,8 @@ const schema = z.object({
       quantity: z.number().int().min(1),
     })
   ).min(1, "Adicione ao menos um produto"),
-  reason: z.string().optional().nullable(),
+  // Motivo em caixa alta pra manter o padrão do módulo de Estoque.
+  reason: z.string().optional().nullable().transform((v) => (v ? v.trim().toUpperCase() : v)),
 })
 
 class InsufficientStockError extends Error {

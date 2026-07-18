@@ -99,7 +99,7 @@ export function AdjustStockModal({ product, onClose, onSave, loading }: Props) {
               id="adjust-reason"
               type="text"
               value={reason}
-              onChange={(e) => { setReason(e.target.value); setError("") }}
+              onChange={(e) => { setReason(e.target.value.toUpperCase()); setError("") }}
               placeholder="Ex: Contagem física de 18/07, divergência encontrada"
               className="h-14 rounded-xl border-2 border-border bg-background px-4 text-base text-foreground placeholder:text-muted-foreground outline-none focus:border-ring"
             />

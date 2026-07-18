@@ -3,12 +3,17 @@ import { z } from "zod"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 
+// Mesma normalização em caixa alta usada no cadastro (POST) — só afeta o que
+// for salvo a partir daqui, não retroage sobre dados já gravados.
+const upper = (v: string) => v.trim().toUpperCase()
+const upperNullable = (v: string | null | undefined) => (v ? upper(v) : v ?? null)
+
 const schema = z.object({
-  name: z.string().min(1, "Nome é obrigatório"),
-  sku: z.string().optional().nullable(),
-  unit: z.string().min(1, "Unidade é obrigatória"),
+  name: z.string().min(1, "Nome é obrigatório").transform(upper),
+  sku: z.string().optional().nullable().transform(upperNullable),
+  unit: z.string().min(1, "Unidade é obrigatória").transform(upper),
   minStock: z.number().int().min(0, "Estoque mínimo não pode ser negativo"),
-  description: z.string().optional().nullable(),
+  description: z.string().optional().nullable().transform(upperNullable),
   ncm: z.string().optional().nullable(),
   price: z.number().positive().optional().nullable(),
   costPrice: z.number().positive().optional().nullable(),
@@ -37,7 +42,7 @@ export async function PUT(
     where: { id },
     data: {
       name: parsed.data.name,
-      sku: parsed.data.sku || null,
+      sku: parsed.data.sku ?? null,
       unit: parsed.data.unit,
       minStock: parsed.data.minStock,
       description: parsed.data.description ?? null,

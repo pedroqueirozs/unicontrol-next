@@ -165,7 +165,7 @@ export function MovementInTab({ products, onRegisterBatch }: Props) {
           id="in-reason"
           type="text"
           value={reason}
-          onChange={(e) => { setReason(e.target.value); setReasonError(false) }}
+          onChange={(e) => { setReason(e.target.value.toUpperCase()); setReasonError(false) }}
           placeholder="Ex: NF 12345, Compra Fornecedor XYZ..."
           className={`h-16 rounded-xl border-2 bg-background px-5 text-xl text-foreground placeholder:text-muted-foreground outline-none transition-colors ${
             reasonError ? "border-destructive" : "border-border focus:border-ring"

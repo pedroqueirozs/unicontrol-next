@@ -142,7 +142,7 @@ export function MovementOutTab({ products, onRegisterBatch }: Props) {
           id="out-reason"
           type="text"
           value={reason}
-          onChange={(e) => { setReason(e.target.value); setReasonError(false) }}
+          onChange={(e) => { setReason(e.target.value.toUpperCase()); setReasonError(false) }}
           placeholder="Ex: Pedido NF 1234, Pedido Cliente XYZ..."
           className={`h-16 rounded-xl border-2 bg-background px-5 text-xl text-foreground placeholder:text-muted-foreground outline-none transition-colors ${
             reasonError ? "border-destructive" : "border-border focus:border-ring"
