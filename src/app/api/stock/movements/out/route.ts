@@ -13,6 +13,12 @@ const schema = z.object({
   reason: z.string().optional().nullable(),
 })
 
+class InsufficientStockError extends Error {
+  constructor(public productName: string, public unit: string) {
+    super(`Insufficient stock for ${productName}`)
+  }
+}
+
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.companyId) return new NextResponse("Unauthorized", { status: 401 })
@@ -36,10 +42,15 @@ export async function POST(req: Request) {
   if (products.length !== productIds.length) {
     return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 })
   }
+  const productById = new Map(products.map((p) => [p.id, p]))
 
-  // Validate sufficient stock
+  // Early, friendly check against the stock we just read (covers the common case
+  // with a precise "disponível: X" message). The real guarantee against negative
+  // stock is the conditional decrement inside the transaction below, which re-checks
+  // currentStock atomically at write time — this is what protects against two
+  // concurrent saídas for the same product both passing this first check.
   for (const item of items) {
-    const product = products.find((p) => p.id === item.productId)!
+    const product = productById.get(item.productId)!
     if (product.currentStock < item.quantity) {
       return NextResponse.json(
         { error: `Estoque insuficiente para "${product.name}". Disponível: ${product.currentStock} ${product.unit}.` },
@@ -48,11 +59,23 @@ export async function POST(req: Request) {
     }
   }
 
-  await prisma.$transaction(
-    items.flatMap((item) => {
-      const product = products.find((p) => p.id === item.productId)!
-      return [
-        prisma.stockMovement.create({
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const item of items) {
+        const product = productById.get(item.productId)!
+
+        // Conditional UPDATE: only decrements if there's still enough stock at the
+        // moment of writing. If a concurrent saída already consumed it, count === 0
+        // and we abort the whole batch instead of allowing negative stock.
+        const result = await tx.stockProduct.updateMany({
+          where: { id: item.productId, currentStock: { gte: item.quantity } },
+          data: { currentStock: { decrement: item.quantity } },
+        })
+        if (result.count === 0) {
+          throw new InsufficientStockError(product.name, product.unit)
+        }
+
+        await tx.stockMovement.create({
           data: {
             productId: item.productId,
             productName: product.name,
@@ -65,14 +88,18 @@ export async function POST(req: Request) {
             operatorName,
             companyId,
           },
-        }),
-        prisma.stockProduct.update({
-          where: { id: item.productId },
-          data: { currentStock: { decrement: item.quantity } },
-        }),
-      ]
+        })
+      }
     })
-  )
+  } catch (err) {
+    if (err instanceof InsufficientStockError) {
+      return NextResponse.json(
+        { error: `Estoque insuficiente para "${err.productName}" (alterado por outra operação simultânea). Recarregue e tente novamente.` },
+        { status: 422 }
+      )
+    }
+    throw err
+  }
 
   return new NextResponse(null, { status: 204 })
 }

@@ -115,22 +115,23 @@ export default function StockPage() {
     }
   }
 
-  // Register batch movement in (one API call per product, reload once at the end)
+  // Register batch movement in (single atomic request for the whole batch)
   async function handleMovementInBatch(
     items: { product: StockProduct; quantity: number }[],
     reason: string
   ) {
-    for (const item of items) {
-      const res = await fetch("/api/stock/movements/in", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: item.product.id, quantity: item.quantity, reason: reason || null }),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        toast.error(body.error ?? "Erro ao registrar entrada.")
-        throw new Error()
-      }
+    const res = await fetch("/api/stock/movements/in", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: items.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
+        reason: reason || null,
+      }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      toast.error(body.error ?? "Erro ao registrar entrada.")
+      throw new Error()
     }
     await loadData()
     toast.success(`Entrada de ${items.length} produto(s) registrada com sucesso!`)

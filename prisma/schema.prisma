@@ -328,6 +328,7 @@ model StockProduct {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([companyId, code])
   @@index([companyId])
 }
 
