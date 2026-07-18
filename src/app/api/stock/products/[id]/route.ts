@@ -64,6 +64,13 @@ export async function DELETE(
   })
   if (!existing) return new NextResponse("Not Found", { status: 404 })
 
+  if (existing.currentStock > 0) {
+    return NextResponse.json(
+      { error: `Não é possível excluir: há ${existing.currentStock} ${existing.unit} em estoque. Zere o estoque (saída ou ajuste) antes de excluir.` },
+      { status: 422 }
+    )
+  }
+
   await prisma.stockProduct.delete({ where: { id } })
 
   return new NextResponse(null, { status: 204 })

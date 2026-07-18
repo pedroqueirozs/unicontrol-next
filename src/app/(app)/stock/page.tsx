@@ -115,7 +115,11 @@ export default function StockPage() {
   async function handleDeleteProduct(product: StockProduct) {
     try {
       const res = await fetch(`/api/stock/products/${product.id}`, { method: "DELETE" })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        toast.error(body.error ?? "Erro ao remover produto.")
+        return
+      }
       setProducts((prev) => prev.filter((p) => p.id !== product.id))
       setConfirmDelete(null)
       toast.success("Produto removido.")
@@ -306,25 +310,53 @@ export default function StockPage() {
             className="bg-card w-full md:max-w-sm md:rounded-2xl rounded-t-2xl shadow-xl p-5"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="font-semibold text-foreground mb-1">Excluir produto?</h2>
-            <p className="text-sm text-muted-foreground mb-5">
-              O produto <strong className="text-foreground">{confirmDelete.name}</strong> será removido
-              do cadastro. As movimentações no histórico não serão apagadas.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleDeleteProduct(confirmDelete)}
-                className="flex-1 py-2.5 rounded-lg bg-destructive text-white text-sm font-medium hover:opacity-90 transition min-h-[44px]"
-              >
-                Excluir
-              </button>
-              <button
-                onClick={() => setConfirmDelete(null)}
-                className="px-4 py-2.5 rounded-lg border border-border text-foreground text-sm hover:bg-muted transition min-h-[44px]"
-              >
-                Cancelar
-              </button>
-            </div>
+            {confirmDelete.currentStock > 0 ? (
+              <>
+                <h2 className="font-semibold text-foreground mb-1">Não é possível excluir</h2>
+                <p className="text-sm text-muted-foreground mb-5">
+                  <strong className="text-foreground">{confirmDelete.name}</strong> ainda tem{" "}
+                  <strong className="text-destructive">{confirmDelete.currentStock} {confirmDelete.unit}</strong> em
+                  estoque. Zere o estoque antes de excluir, para não perder o rastreamento de uma mercadoria que
+                  ainda existe fisicamente.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setAdjustProduct(confirmDelete); setConfirmDelete(null) }}
+                    className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition min-h-[44px]"
+                  >
+                    Ajustar estoque
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(null)}
+                    className="px-4 py-2.5 rounded-lg border border-border text-foreground text-sm hover:bg-muted transition min-h-[44px]"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="font-semibold text-foreground mb-1">Excluir produto?</h2>
+                <p className="text-sm text-muted-foreground mb-5">
+                  O produto <strong className="text-foreground">{confirmDelete.name}</strong> será removido
+                  do cadastro. As movimentações no histórico não serão apagadas.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleDeleteProduct(confirmDelete)}
+                    className="flex-1 py-2.5 rounded-lg bg-destructive text-white text-sm font-medium hover:opacity-90 transition min-h-[44px]"
+                  >
+                    Excluir
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(null)}
+                    className="px-4 py-2.5 rounded-lg border border-border text-foreground text-sm hover:bg-muted transition min-h-[44px]"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
