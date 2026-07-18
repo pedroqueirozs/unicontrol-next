@@ -123,6 +123,7 @@ Helper centralizado em `src/lib/roles.ts` → `isAdminLevel(role)`.
 - Detalhes: `docs/sessoes/2026-07-18.md` (Parte 2) e `RN-21` em `docs/regras-de-negocio.md`.
 - **Bloqueio de exclusão com estoque:** produto com `currentStock > 0` não pode ser excluído (`DELETE /api/stock/products/[id]` retorna 422) — o modal de exclusão detecta isso e oferece "Ajustar estoque" em vez de excluir. Produto zerado exclui normal. Detalhes: `docs/sessoes/2026-07-18.md` (Parte 3) e `RN-22`.
 - **Histórico paginado + saldo rastreável:** `GET /api/stock/movements` pagina de verdade (`page`/`pageSize`/`type`, sem mais o limite fixo de 200). Toda movimentação (entrada/saída/estorno/ajuste) grava `previousStock`/`newStock` — o histórico mostra "Saldo (antes → depois)" pra qualquer tipo. `history-tab.tsx` busca seus próprios dados (não depende mais de `page.tsx`). As 62 movimentações antigas foram recalculadas via `scripts/backfill-movement-balances.ts` (idempotente, sempre roda em modo simulação por padrão — só grava com `--apply`). Detalhes: `docs/sessoes/2026-07-18.md` (Parte 4).
+- **Texto em caixa alta:** nome/SKU/descrição/unidade do produto e o motivo de Entrada/Saída/Ajuste são normalizados em maiúsculas (cliente + servidor). Só vale pra dados novos — nada existente foi alterado retroativamente. Detalhes: `docs/sessoes/2026-07-18.md` (Parte 5).
 
 ---
 
