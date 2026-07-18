@@ -128,6 +128,22 @@ O sistema possui 4 roles de usuário: `admin`, `administrativo`, `expedicao` e `
 - Um mesmo CNPJ pode ter múltiplos cadastros (para clientes com endereços de entrega diferentes)
 - A busca nos módulos é feita por nome ou CNPJ/CPF — não mais pelo código
 
+## RN-21 — Correção de Movimentações de Estoque (Estorno e Ajuste)
+
+O histórico de movimentações (`StockMovement`) nunca é editado ou apagado diretamente — é um log de auditoria imutável. Existem duas formas de corrigir um erro, para dois cenários diferentes:
+
+**Estorno** — quando um lançamento específico de entrada ou saída foi feito errado (bipou o produto errado, digitou a quantidade errada):
+- Cria automaticamente uma nova movimentação `estorno`, com a direção invertida da original, vinculada a ela (`reversalOfId`)
+- O lançamento original é marcado como estornado (`reversedAt`) — continua visível no histórico, não é apagado
+- Um lançamento só pode ser estornado **uma vez**; um estorno não pode ser estornado (se o estorno também estiver errado, corrige-se com um novo estorno ou um ajuste)
+- **Janela de 24h:** qualquer usuário pode estornar um lançamento (seu ou de outro operador) dentro de 24h da criação. Após esse prazo, só `admin`/`administrativo` pode estornar
+- Estornar uma entrada não pode deixar o estoque negativo (se o produto já foi consumido depois da entrada errada, o estorno é bloqueado)
+
+**Ajuste** — quando a contagem física do estoque diverge do sistema, sem saber qual lançamento passado causou a diferença:
+- O operador informa a quantidade contada fisicamente e o **motivo é obrigatório**
+- O sistema calcula a diferença automaticamente e registra uma movimentação `ajuste`, com o valor anterior e o novo valor (`previousStock`/`newStock`)
+- Disponível para todos os papéis com acesso ao Estoque (mesmo nível de acesso de Entrada/Saída — ver RN-18), sem restrição adicional
+
 ---
 
 ## Problemas e Oportunidades de Melhoria

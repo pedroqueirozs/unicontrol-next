@@ -4,7 +4,7 @@
 > Qualquer IA deve ler este arquivo para saber exatamente onde o projeto está.
 
 **Última atualização:** 2026-07-18
-**Sessão mais recente:** conferência crítica do módulo de Estoque — corrigidas 3 condições de corrida que ameaçavam a integridade dos dados durante a contagem de estoque em andamento (saída podia ficar negativa, código de produto podia duplicar e confundir o bipador, entrada em lote não era atômica)
+**Sessão mais recente:** conferência crítica do módulo de Estoque (3 condições de corrida corrigidas) + duas funcionalidades novas de correção: Estorno de lançamento e Ajuste de contagem física — testadas por Pedro em produção
 
 ---
 
@@ -116,6 +116,11 @@ Helper centralizado em `src/lib/roles.ts` → `isAdminLevel(role)`.
 - **Entrada de estoque** (`movements/in/route.ts`) aceita o lote inteiro (`items: []`) numa única transação atômica, mesmo padrão da saída — antes era uma requisição por produto em loop, sem atomicidade entre itens.
 - **Código do produto** tem constraint única no banco (`@@unique([companyId, code])`, migration `20260718033248_stock_product_code_unique`) — sem isso, dois cadastros simultâneos podiam gerar o mesmo código e o bipador de Entrada/Saída resolveria pro produto errado. `POST /api/stock/products` recalcula e tenta de novo automaticamente em caso de colisão.
 - Detalhes completos da investigação e das correções: `docs/sessoes/2026-07-18.md`.
+
+### Estorno e Ajuste de Estoque (2026-07-18)
+- **Estorno** (`POST /api/stock/movements/[id]/reverse`): reverte um lançamento de entrada/saída errado, criando um movimento `type: "estorno"` vinculado (`reversalOfId`) e marcando o original como `reversedAt`. Qualquer operador estorna dentro de 24h; depois disso, só `admin`/`administrativo` (`isAdminLevel()`). Botão "Estornar" na aba Histórico.
+- **Ajuste** (`POST /api/stock/movements/adjust`): corrige o `currentStock` para bater com a contagem física, registrando um movimento `type: "ajuste"` com `previousStock`/`newStock` e motivo obrigatório. Livre para todos os papéis (mesmo nível de Entrada/Saída). Ícone "Ajustar estoque" por produto na aba Estoque.
+- Detalhes: `docs/sessoes/2026-07-18.md` (Parte 2) e `RN-21` em `docs/regras-de-negocio.md`.
 
 ---
 

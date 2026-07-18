@@ -29,7 +29,7 @@ Um usuário (`User`) pertence a uma única empresa (`Company`) e possui um `role
 | `GoodsShipped` | Mercadorias Enviadas | `name`/`city`/`uf` são denormalizados do cliente (evita join só pra exibir a tabela). `trackingCodes` é `String[]` nativo do Postgres; `notesHistory` é `Json` (array de `{id, text, createdAt}`) |
 | `Pending` | Pendências | Um único model pra cliente e fornecedor, diferenciado pelo campo `type: "client" \| "supplier"`. `updates` é `Json`, histórico imutável |
 | `StockProduct` | Estoque → produtos | `code` é sequencial por empresa (`max(code) + 1`); `sku` é o código do sistema antigo, mantido só pra busca de transição |
-| `StockMovement` | Estoque → entrada/saída | Registro imutável; campos do produto são denormalizados (`productName`, `productCode`, `productSku`) pra preservar histórico mesmo se o produto for editado ou excluído depois. `direction`: `1` = entrada, `-1` = saída |
+| `StockMovement` | Estoque → entrada/saída/estorno/ajuste | Registro imutável — nunca é editado ou apagado, mesmo para corrigir erro (ver RN-21); campos do produto são denormalizados (`productName`, `productCode`, `productSku`) pra preservar histórico mesmo se o produto for editado ou excluído depois. `type`: `"entrada" \| "saida" \| "estorno" \| "ajuste"`; `direction`: `1` = soma ao estoque, `-1` = subtrai. `reversalOfId`/`reversedAt` vinculam um estorno ao lançamento original. `previousStock`/`newStock` guardam o antes/depois de um ajuste |
 
 ---
 
