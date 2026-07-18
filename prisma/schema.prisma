@@ -335,6 +335,7 @@ model StockProduct {
 // Registro imutável de cada movimentação de estoque.
 // Campos de produto são denormalizados para preservar histórico mesmo se o produto for alterado/excluído.
 // direction: 1 = entrada, -1 = saída.
+// type: "entrada" | "saida" | "estorno" | "ajuste"
 model StockMovement {
   id           String  @id @default(cuid())
   productId    String
@@ -346,6 +347,19 @@ model StockMovement {
   type         String
   reason       String?
   operatorName String
+
+  // Estorno: presentes só em movimentos do tipo "estorno" — aponta para o
+  // movimento original que está sendo revertido (sem @relation, mesmo padrão
+  // de productId: string solto, não bloqueia caso o registro original suma).
+  reversalOfId String?
+  // Presente no movimento original quando ele é estornado — marca que já foi
+  // revertido (impede estornar duas vezes) e não afeta o cálculo de estoque.
+  reversedAt   DateTime?
+
+  // Ajuste: contexto opcional só para type "ajuste" (contagem física) —
+  // guarda o antes/depois para o histórico não depender de recalcular.
+  previousStock Int?
+  newStock      Int?
 
   companyId String
   company   Company @relation(fields: [companyId], references: [id])

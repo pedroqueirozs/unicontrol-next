@@ -10,6 +10,7 @@ import { MovementOutTab } from "./movement-out-tab"
 import { HistoryTab } from "./history-tab"
 import { ProductModal } from "./product-modal"
 import { LabelPrintModal } from "./label-print-modal"
+import { AdjustStockModal } from "./adjust-stock-modal"
 
 type Tab = "estoque" | "entrada" | "saida" | "historico"
 
@@ -36,6 +37,14 @@ export default function StockPage() {
 
   // Label print
   const [printProduct, setPrintProduct] = useState<StockProduct | null>(null)
+
+  // Stock adjustment
+  const [adjustProduct, setAdjustProduct] = useState<StockProduct | null>(null)
+  const [savingAdjust, setSavingAdjust] = useState(false)
+
+  // Reverse (estorno) confirm
+  const [confirmReverse, setConfirmReverse] = useState<StockMovement | null>(null)
+  const [reversing, setReversing] = useState(false)
 
   // Load data
   const loadData = useCallback(async () => {
@@ -159,6 +168,47 @@ export default function StockPage() {
     toast.success(`Saída de ${items.length} produto(s) registrada com sucesso!`)
   }
 
+  // Adjust stock (physical count)
+  async function handleAdjustStock(countedStock: number, reason: string) {
+    if (!adjustProduct) return
+    setSavingAdjust(true)
+    try {
+      const res = await fetch("/api/stock/movements/adjust", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: adjustProduct.id, countedStock, reason }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        toast.error(body.error ?? "Erro ao ajustar estoque.")
+        return
+      }
+      await loadData()
+      setAdjustProduct(null)
+      toast.success("Estoque ajustado com sucesso.")
+    } finally {
+      setSavingAdjust(false)
+    }
+  }
+
+  // Reverse (estorno) a movement
+  async function handleReverseMovement(movement: StockMovement) {
+    setReversing(true)
+    try {
+      const res = await fetch(`/api/stock/movements/${movement.id}/reverse`, { method: "POST" })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        toast.error(body.error ?? "Erro ao estornar lançamento.")
+        return
+      }
+      await loadData()
+      setConfirmReverse(null)
+      toast.success("Lançamento estornado com sucesso.")
+    } finally {
+      setReversing(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-5 p-4 md:p-6">
       {/* Header */}
@@ -211,6 +261,7 @@ export default function StockPage() {
               onEdit={(p) => { setEditProduct(p); setModalOpen(true) }}
               onDelete={(p) => setConfirmDelete(p)}
               onPrint={(p) => setPrintProduct(p)}
+              onAdjust={(p) => setAdjustProduct(p)}
             />
           )}
           {activeTab === "entrada" && (
@@ -220,13 +271,21 @@ export default function StockPage() {
             <MovementOutTab products={products} onRegisterBatch={handleMovementOutBatch} />
           )}
           {activeTab === "historico" && (
-            <HistoryTab movements={movements} />
+            <HistoryTab movements={movements} onReverse={(m) => setConfirmReverse(m)} />
           )}
         </div>
       )}
 
       {/* Label print modal */}
       <LabelPrintModal product={printProduct} onClose={() => setPrintProduct(null)} />
+
+      {/* Adjust stock modal */}
+      <AdjustStockModal
+        product={adjustProduct}
+        onClose={() => setAdjustProduct(null)}
+        onSave={handleAdjustStock}
+        loading={savingAdjust}
+      />
 
       {/* Product modal */}
       <ProductModal
@@ -261,6 +320,41 @@ export default function StockPage() {
               </button>
               <button
                 onClick={() => setConfirmDelete(null)}
+                className="px-4 py-2.5 rounded-lg border border-border text-foreground text-sm hover:bg-muted transition min-h-[44px]"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm reverse (estorno) */}
+      {confirmReverse && (
+        <div
+          className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 p-0 md:p-4"
+          onClick={() => setConfirmReverse(null)}
+        >
+          <div
+            className="bg-card w-full md:max-w-sm md:rounded-2xl rounded-t-2xl shadow-xl p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="font-semibold text-foreground mb-1">Estornar movimentação?</h2>
+            <p className="text-sm text-muted-foreground mb-5">
+              A {confirmReverse.type === "entrada" ? "entrada" : "saída"} de{" "}
+              <strong className="text-foreground">{confirmReverse.quantity} {confirmReverse.productName}</strong> será
+              revertida e uma nova movimentação de estorno será registrada no histórico.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleReverseMovement(confirmReverse)}
+                disabled={reversing}
+                className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition min-h-[44px] disabled:opacity-50"
+              >
+                {reversing ? "Estornando..." : "Estornar"}
+              </button>
+              <button
+                onClick={() => setConfirmReverse(null)}
                 className="px-4 py-2.5 rounded-lg border border-border text-foreground text-sm hover:bg-muted transition min-h-[44px]"
               >
                 Cancelar

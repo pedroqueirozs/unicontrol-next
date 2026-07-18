@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Package, Plus, Pencil, Trash2, Printer, AlertTriangle, Hash, Search, X, ChevronLeft, ChevronRight } from "lucide-react"
+import { Package, Plus, Pencil, Trash2, Printer, AlertTriangle, Hash, Search, X, ChevronLeft, ChevronRight, ClipboardCheck } from "lucide-react"
 import type { StockProduct } from "./types"
 
 const PAGE_SIZE = 50
@@ -17,9 +17,10 @@ interface Props {
   onEdit: (product: StockProduct) => void
   onDelete: (product: StockProduct) => void
   onPrint: (product: StockProduct) => void
+  onAdjust: (product: StockProduct) => void
 }
 
-export function ProductsTab({ products, onAdd, onEdit, onDelete, onPrint }: Props) {
+export function ProductsTab({ products, onAdd, onEdit, onDelete, onPrint, onAdjust }: Props) {
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
 
@@ -144,6 +145,9 @@ export function ProductsTab({ products, onAdd, onEdit, onDelete, onPrint }: Prop
                       <td className="px-5 py-4 text-right text-base text-foreground/80">{p.minStock}</td>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-1">
+                          <button onClick={() => onAdjust(p)} title="Ajustar estoque" className="min-w-[40px] min-h-[40px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition">
+                            <ClipboardCheck size={16} />
+                          </button>
                           <button onClick={() => onPrint(p)} title="Imprimir etiqueta" className="min-w-[40px] min-h-[40px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition">
                             <Printer size={16} />
                           </button>
@@ -194,6 +198,9 @@ export function ProductsTab({ products, onAdd, onEdit, onDelete, onPrint }: Prop
                   <div className="flex items-center justify-between pt-3 border-t border-border">
                     <p className="text-sm text-muted-foreground">Mínimo: <strong className="text-foreground">{p.minStock}</strong></p>
                     <div className="flex gap-1">
+                      <button onClick={() => onAdjust(p)} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground rounded-lg hover:bg-muted transition">
+                        <ClipboardCheck size={18} />
+                      </button>
                       <button onClick={() => onPrint(p)} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground rounded-lg hover:bg-muted transition">
                         <Printer size={18} />
                       </button>
