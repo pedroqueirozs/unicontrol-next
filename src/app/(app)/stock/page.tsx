@@ -240,12 +240,14 @@ export default function StockPage() {
               onAdjust={(p) => setAdjustProduct(p)}
             />
           )}
-          {activeTab === "entrada" && (
+          {/* Entrada e Saída ficam sempre montadas (só escondidas) para não perder
+              o carrinho quando o operador troca de aba pra conferir algo em Estoque */}
+          <div className={activeTab === "entrada" ? "" : "hidden"}>
             <MovementInTab products={products} onRegisterBatch={handleMovementInBatch} />
-          )}
-          {activeTab === "saida" && (
+          </div>
+          <div className={activeTab === "saida" ? "" : "hidden"}>
             <MovementOutTab products={products} onRegisterBatch={handleMovementOutBatch} />
-          )}
+          </div>
           {activeTab === "historico" && (
             <HistoryTab onReversed={loadData} />
           )}

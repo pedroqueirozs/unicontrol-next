@@ -3,8 +3,8 @@
 > Arquivo atualizado ao final de cada sessão de trabalho.
 > Qualquer IA deve ler este arquivo para saber exatamente onde o projeto está.
 
-**Última atualização:** 2026-07-18
-**Sessão mais recente:** conferência crítica do módulo de Estoque — 3 condições de corrida corrigidas, Estorno e Ajuste de estoque, bloqueio de exclusão com estoque, e paginação + saldo rastreável (antes → depois) em toda movimentação do histórico. Tudo testado por Pedro em produção
+**Última atualização:** 2026-07-21
+**Sessão mais recente:** correção de UX no módulo de Estoque — carrinho de Entrada/Saída não perde mais os itens selecionados quando o operador troca de aba no meio do processo.
 
 ---
 
@@ -124,6 +124,11 @@ Helper centralizado em `src/lib/roles.ts` → `isAdminLevel(role)`.
 - **Bloqueio de exclusão com estoque:** produto com `currentStock > 0` não pode ser excluído (`DELETE /api/stock/products/[id]` retorna 422) — o modal de exclusão detecta isso e oferece "Ajustar estoque" em vez de excluir. Produto zerado exclui normal. Detalhes: `docs/sessoes/2026-07-18.md` (Parte 3) e `RN-22`.
 - **Histórico paginado + saldo rastreável:** `GET /api/stock/movements` pagina de verdade (`page`/`pageSize`/`type`, sem mais o limite fixo de 200). Toda movimentação (entrada/saída/estorno/ajuste) grava `previousStock`/`newStock` — o histórico mostra "Saldo (antes → depois)" pra qualquer tipo. `history-tab.tsx` busca seus próprios dados (não depende mais de `page.tsx`). As 62 movimentações antigas foram recalculadas via `scripts/backfill-movement-balances.ts` (idempotente, sempre roda em modo simulação por padrão — só grava com `--apply`). Detalhes: `docs/sessoes/2026-07-18.md` (Parte 4).
 - **Texto em caixa alta:** nome/SKU/descrição/unidade do produto e o motivo de Entrada/Saída/Ajuste são normalizados em maiúsculas (cliente + servidor). Só vale pra dados novos — nada existente foi alterado retroativamente. Detalhes: `docs/sessoes/2026-07-18.md` (Parte 5).
+
+### Carrinho de Entrada/Saída não perde seleção ao trocar de aba (2026-07-21)
+- **Problema relatado pelo operador:** ao montar a lista de itens de uma Entrada/Saída, se ele precisasse ir até a aba "Estoque" para conferir algo (ex: nome exato de um produto) antes de continuar, todo o carrinho montado até ali era perdido.
+- **Causa:** em `stock/page.tsx`, as abas eram renderizadas condicionalmente (`{activeTab === "entrada" && <MovementInTab />}`), então trocar de aba desmontava o componente e destruía seu estado local (carrinho, motivo, produto selecionado).
+- **Correção:** `MovementInTab` e `MovementOutTab` (`stock/movement-in-tab.tsx`, `stock/movement-out-tab.tsx`) agora ficam sempre montadas; a troca de aba só alterna a classe `hidden` (CSS) em vez de desmontar o componente. `ProductsTab` e `HistoryTab` continuam sendo montadas sob demanda, sem necessidade de preservar estado.
 
 ---
 
