@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect } from "react"
 import { PackageMinus, ScanLine, Trash2, CheckCircle2, ChevronRight, Plus, Minus } from "lucide-react"
 import type { StockProduct } from "./types"
+import { QuantityStepper } from "./quantity-stepper"
 
 type CartItem = { product: StockProduct; quantity: number }
 
@@ -16,12 +17,19 @@ export function MovementOutTab({ products, onRegisterBatch }: Props) {
   const [reason, setReason] = useState("")
   const [reasonError, setReasonError] = useState(false)
 
-  const [scanInput, setScanInput] = useState("")
+  // Product selection
+  const [searchText, setSearchText] = useState("")
+  const [selectedProduct, setSelectedProduct] = useState<StockProduct | null>(null)
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [quantity, setQuantity] = useState(1)
   const [flashMsg, setFlashMsg] = useState<{ text: string; type: "ok" | "err" } | null>(null)
+
+  // Cart
   const [cart, setCart] = useState<CartItem[]>([])
   const [submitting, setSubmitting] = useState(false)
 
-  const scanRef = useRef<HTMLInputElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+  const quantityRef = useRef<HTMLInputElement>(null)
   const reasonRef = useRef<HTMLInputElement>(null)
   const startButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -35,39 +43,71 @@ export function MovementOutTab({ products, onRegisterBatch }: Props) {
     setTimeout(() => setFlashMsg(null), 2500)
   }
 
-  function handleScan(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== "Enter") return
-    e.preventDefault()
-    const val = scanInput.trim()
-    if (!val) return
+  // Filter products as you type — busca por nome, SKU (legado) e código automático,
+  // igual à busca da aba Entrada.
+  const trimmed = searchText.trim().toLowerCase()
+  const numericTrimmed = parseInt(trimmed, 10)
+  const results =
+    trimmed.length >= 1
+      ? products.filter(
+          (p) =>
+            p.name.toLowerCase().includes(trimmed) ||
+            (p.sku && p.sku.toLowerCase().includes(trimmed)) ||
+            (!isNaN(numericTrimmed) && p.code === numericTrimmed)
+        ).slice(0, 5)
+      : []
 
-    const numericCode = parseInt(val, 10)
-    const product = products.find((p) =>
-      (!isNaN(numericCode) && p.code === numericCode) ||
-      (p.sku && p.sku.toLowerCase() === val.toLowerCase())
-    )
-    if (!product) {
-      flash(`"${val}" não encontrado no cadastro.`, "err")
-      setScanInput("")
-      return
-    }
-
-    setCart((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id)
-      if (existing) {
-        flash(`${product.name} → ${existing.quantity + 1}×`, "ok")
-        return prev.map((i) =>
-          i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
-        )
-      }
-      flash(`${product.name} adicionado`, "ok")
-      return [...prev, { product, quantity: 1 }]
-    })
-    setScanInput("")
-    scanRef.current?.focus()
+  function selectProduct(product: StockProduct) {
+    setSelectedProduct(product)
+    setSearchText(product.name)
+    setShowDropdown(false)
+    setQuantity(1)
+    setTimeout(() => { quantityRef.current?.focus(); quantityRef.current?.select() }, 50)
   }
 
-  const focusScan = useCallback(() => scanRef.current?.focus(), [])
+  function clearSelection() {
+    setSelectedProduct(null)
+    setSearchText("")
+    setQuantity(1)
+    setTimeout(() => searchRef.current?.focus(), 50)
+  }
+
+  function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Escape") { setShowDropdown(false); return }
+    if (e.key !== "Enter") return
+    e.preventDefault()
+    const val = searchText.trim()
+    if (!val) return
+
+    // Bipador: o código impresso na etiqueta é o "code" (auto), então tem prioridade
+    // sobre um match parcial por nome/SKU — evita ambiguidade quando o operador bipa.
+    const numericVal = parseInt(val, 10)
+    const exact = products.find((p) =>
+      (!isNaN(numericVal) && p.code === numericVal) ||
+      (p.sku && p.sku.toLowerCase() === val.toLowerCase())
+    )
+    if (exact) { selectProduct(exact); return }
+    if (results.length === 1) { selectProduct(results[0]); return }
+
+    flash(`"${val}" não encontrado no cadastro.`, "err")
+    setSearchText("")
+  }
+
+  function addToCart() {
+    if (!selectedProduct || quantity < 1) return
+    setCart((prev) => {
+      const existing = prev.find((i) => i.product.id === selectedProduct.id)
+      if (existing) {
+        flash(`${selectedProduct.name} → ${existing.quantity + quantity}×`, "ok")
+        return prev.map((i) =>
+          i.product.id === selectedProduct.id ? { ...i, quantity: i.quantity + quantity } : i
+        )
+      }
+      flash(`${selectedProduct.name} adicionado`, "ok")
+      return [...prev, { product: selectedProduct, quantity }]
+    })
+    clearSelection()
+  }
 
   function updateQty(productId: string, delta: number) {
     setCart((prev) =>
@@ -86,7 +126,7 @@ export function MovementOutTab({ products, onRegisterBatch }: Props) {
     setReason("")
     setReasonError(false)
     setCart([])
-    setScanInput("")
+    clearSelection()
     setFlashMsg(null)
   }
 
@@ -147,7 +187,7 @@ export function MovementOutTab({ products, onRegisterBatch }: Props) {
           className={`h-16 rounded-xl border-2 bg-background px-5 text-xl text-foreground placeholder:text-muted-foreground outline-none transition-colors ${
             reasonError ? "border-destructive" : "border-border focus:border-ring"
           }`}
-          onKeyDown={(e) => { if (e.key === "Enter") focusScan() }}
+          onKeyDown={(e) => { if (e.key === "Enter") searchRef.current?.focus() }}
         />
         {reasonError && (
           <p className="text-base text-destructive font-medium">Informe o motivo antes de confirmar.</p>
@@ -155,25 +195,77 @@ export function MovementOutTab({ products, onRegisterBatch }: Props) {
       </div>
 
       {/* Bipador panel */}
-      <div className="rounded-2xl bg-sidebar p-6 flex flex-col gap-4">
+      <div className="rounded-2xl bg-sidebar p-6 flex flex-col gap-5">
         <div className="flex items-center gap-2">
           <ScanLine size={22} className="text-sidebar-foreground/70" />
           <h2 className="text-xl font-bold text-sidebar-foreground">Bipador / Conferência</h2>
         </div>
         <p className="text-base text-sidebar-foreground/60">
-          Bipe o código de barras ou digite o SKU e pressione Enter para adicionar à lista.
+          Bipe o código de barras ou digite nome / SKU para buscar.
         </p>
 
-        <input
-          ref={scanRef}
-          type="text"
-          value={scanInput}
-          onChange={(e) => setScanInput(e.target.value)}
-          onKeyDown={handleScan}
-          placeholder="Bipe aqui..."
-          autoComplete="off"
-          className="h-16 rounded-xl border-2 border-sidebar-foreground/20 bg-sidebar-foreground/10 px-5 text-2xl text-sidebar-foreground placeholder:text-sidebar-foreground/40 outline-none focus:border-sidebar-accent focus:ring-2 focus:ring-sidebar-accent transition-colors font-mono"
-        />
+        <div className="relative">
+          <input
+            ref={searchRef}
+            type="text"
+            value={searchText}
+            autoComplete="off"
+            placeholder="Bipe ou digite nome / SKU..."
+            className="w-full h-16 rounded-xl border-2 border-sidebar-foreground/20 bg-sidebar-foreground/10 px-5 text-2xl text-sidebar-foreground placeholder:text-sidebar-foreground/40 outline-none focus:border-sidebar-accent focus:ring-2 focus:ring-sidebar-accent transition-colors font-mono"
+            onChange={(e) => {
+              setSearchText(e.target.value)
+              setSelectedProduct(null)
+              setShowDropdown(true)
+            }}
+            onFocus={() => setShowDropdown(true)}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+            onKeyDown={handleSearchKeyDown}
+          />
+
+          {showDropdown && results.length > 0 && (
+            <ul className="absolute z-20 mt-1 w-full bg-card border-2 border-border rounded-xl shadow-xl overflow-hidden">
+              {results.map((p) => (
+                <li
+                  key={p.id}
+                  onMouseDown={() => selectProduct(p)}
+                  className="flex items-center justify-between px-5 py-4 hover:bg-muted cursor-pointer border-b border-border last:border-0"
+                >
+                  <div>
+                    <p className="text-lg font-semibold text-foreground">{p.name}</p>
+                    <p className="text-sm text-muted-foreground font-mono">
+                      {p.sku} · Atual: {p.currentStock} {p.unit}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {selectedProduct && (
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-5 py-3 flex-1">
+              <p className="text-xl font-bold text-destructive">{selectedProduct.name}</p>
+              <p className="text-sm text-sidebar-foreground/60 mt-0.5">
+                {selectedProduct.sku} · Estoque atual: {selectedProduct.currentStock} {selectedProduct.unit}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <QuantityStepper
+                value={quantity}
+                onChange={setQuantity}
+                inputRef={quantityRef}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addToCart() } }}
+              />
+              <button
+                onClick={addToCart}
+                className="h-16 px-6 rounded-xl bg-destructive text-white text-lg font-bold hover:opacity-90 transition whitespace-nowrap"
+              >
+                + ADICIONAR
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Flash feedback */}
         {flashMsg && (

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { PackagePlus, ScanLine, X, Trash2, CheckCircle2, ChevronRight } from "lucide-react"
 import type { StockProduct } from "./types"
+import { QuantityStepper } from "./quantity-stepper"
 
 type CartItem = { product: StockProduct; quantity: number }
 
@@ -28,6 +29,7 @@ export function MovementInTab({ products, onRegisterBatch }: Props) {
   const [submitting, setSubmitting] = useState(false)
 
   const searchRef = useRef<HTMLInputElement>(null)
+  const quantityRef = useRef<HTMLInputElement>(null)
   const reasonRef = useRef<HTMLInputElement>(null)
   const startButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -55,6 +57,7 @@ export function MovementInTab({ products, onRegisterBatch }: Props) {
     setShowDropdown(false)
     setErrorMsg("")
     setQuantity(1)
+    setTimeout(() => { quantityRef.current?.focus(); quantityRef.current?.select() }, 50)
   }
 
   function clearSelection() {
@@ -170,6 +173,7 @@ export function MovementInTab({ products, onRegisterBatch }: Props) {
           className={`h-16 rounded-xl border-2 bg-background px-5 text-xl text-foreground placeholder:text-muted-foreground outline-none transition-colors ${
             reasonError ? "border-destructive" : "border-border focus:border-ring"
           }`}
+          onKeyDown={(e) => { if (e.key === "Enter") searchRef.current?.focus() }}
         />
         {reasonError && (
           <p className="text-base text-destructive font-medium">Informe o motivo antes de confirmar.</p>
@@ -241,12 +245,11 @@ export function MovementInTab({ products, onRegisterBatch }: Props) {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <input
-                type="number"
-                min={1}
+              <QuantityStepper
                 value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-                className="w-24 h-16 rounded-xl border-2 border-border bg-background px-4 text-2xl font-bold text-foreground text-center outline-none focus:border-ring"
+                onChange={setQuantity}
+                inputRef={quantityRef}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addToCart() } }}
               />
               <button
                 onClick={addToCart}

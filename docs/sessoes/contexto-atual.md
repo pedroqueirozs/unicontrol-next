@@ -4,7 +4,7 @@
 > Qualquer IA deve ler este arquivo para saber exatamente onde o projeto está.
 
 **Última atualização:** 2026-07-21
-**Sessão mais recente:** correção de UX no módulo de Estoque — carrinho de Entrada/Saída não perde mais os itens selecionados quando o operador troca de aba no meio do processo.
+**Sessão mais recente:** melhorias de UX no módulo de Estoque pedidas pelo operador — carrinho de Entrada/Saída não perde mais a seleção ao trocar de aba, busca da Saída passou a sugerir produtos enquanto digita (igual Entrada), e o fluxo de quantidade foi padronizado entre as duas abas com foco automático no campo de quantidade após bipar/selecionar um produto. Testado por Pedro em produção.
 
 ---
 
@@ -129,6 +129,13 @@ Helper centralizado em `src/lib/roles.ts` → `isAdminLevel(role)`.
 - **Problema relatado pelo operador:** ao montar a lista de itens de uma Entrada/Saída, se ele precisasse ir até a aba "Estoque" para conferir algo (ex: nome exato de um produto) antes de continuar, todo o carrinho montado até ali era perdido.
 - **Causa:** em `stock/page.tsx`, as abas eram renderizadas condicionalmente (`{activeTab === "entrada" && <MovementInTab />}`), então trocar de aba desmontava o componente e destruía seu estado local (carrinho, motivo, produto selecionado).
 - **Correção:** `MovementInTab` e `MovementOutTab` (`stock/movement-in-tab.tsx`, `stock/movement-out-tab.tsx`) agora ficam sempre montadas; a troca de aba só alterna a classe `hidden` (CSS) em vez de desmontar o componente. `ProductsTab` e `HistoryTab` continuam sendo montadas sob demanda, sem necessidade de preservar estado.
+
+### Busca da Saída e padronização do campo de quantidade (2026-07-21)
+- **Busca com sugestões na Saída:** antes, o campo de bipagem da Saída só resolvia em match exato (código/SKU) ao apertar Enter, sem mostrar sugestões enquanto digitava. Agora filtra por nome/SKU/código a cada tecla e mostra um dropdown, igual à Entrada. O match exato por código/SKU continua tendo prioridade no Enter (evita ambiguidade quando o operador bipa).
+- **Fluxo de seleção mudou na Saída:** antes, bipar/confirmar adicionava direto 1 unidade ao carrinho. Agora segue o mesmo padrão da Entrada: bipar ou digitar+Enter **seleciona** o produto (sem adicionar ainda) e o foco pula automaticamente para o campo de quantidade — o operador pode digitar um número (ex: bipar uma vez e digitar "5") ou usar os botões `+`/`-`, e confirma com Enter ou clicando "+ ADICIONAR". Os botões `+`/`-` que já existiam nas linhas do carrinho (para ajuste depois de adicionado) foram mantidos.
+- **Componente novo `QuantityStepper`** (`stock/quantity-stepper.tsx`): campo de quantidade padrão (`[-] [input] [+]`) reutilizado por Entrada e Saída, substituindo o input solto que a Entrada tinha antes.
+- **Atalho de teclado:** em ambas as abas, pressionar Enter no campo "Motivo" agora pula o foco direto pro campo de busca/bipagem — pensado para o fluxo com bipador de código de barras conectado.
+- Motivação: pedido direto do operador do estoque, que perdia a seleção ao trocar de aba e sentia falta da busca por nome na Saída (só funcionava por código exato antes).
 
 ---
 
