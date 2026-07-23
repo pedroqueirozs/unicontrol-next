@@ -50,5 +50,9 @@ export const config = {
   // Exclui /api porque as rotas do NextAuth (/api/auth/*) precisam ser acessíveis
   // sem autenticação (o próprio POST de login passaria por aqui e seria barrado).
   // Rotas de API autenticadas fazem sua própria verificação de sessão no route handler.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.svg|.*\\.png).*)"],
+  // manifest.webmanifest e sw.js também precisam ficar de fora: são arquivos técnicos
+  // do PWA que o navegador busca antes mesmo do usuário estar logado (ex: avaliar se
+  // o site é instalável) — sem essa exclusão, o proxy redirecionava os dois pra /login
+  // e o Chrome recebia HTML no lugar do manifest/service worker, quebrando a instalação.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.svg|.*\\.png).*)"],
 }
