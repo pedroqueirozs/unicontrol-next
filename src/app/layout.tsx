@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -11,6 +11,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "UniControl",
   description: "Sistema de controle interno",
+  manifest: "/manifest.webmanifest",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -18,6 +19,15 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-icon.png",
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "UniControl",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#2B3D4F",
 };
 
 export default function RootLayout({
