@@ -3,8 +3,8 @@
 > Arquivo atualizado ao final de cada sessão de trabalho.
 > Qualquer IA deve ler este arquivo para saber exatamente onde o projeto está.
 
-**Última atualização:** 2026-07-21
-**Sessão mais recente:** melhorias de UX no módulo de Estoque pedidas pelo operador — carrinho de Entrada/Saída não perde mais a seleção ao trocar de aba, busca da Saída passou a sugerir produtos enquanto digita (igual Entrada), e o fluxo de quantidade foi padronizado entre as duas abas com foco automático no campo de quantidade após bipar/selecionar um produto. Testado por Pedro em produção.
+**Última atualização:** 2026-07-23
+**Sessão mais recente:** correção do ícone ao instalar o UniControl como app no PC/celular — antes não existia Web App Manifest e a logo ficava desproporcional/cortada pela máscara do sistema operacional.
 
 ---
 
@@ -106,6 +106,15 @@ Helper centralizado em `src/lib/roles.ts` → `isAdminLevel(role)`.
 ### Favicon
 - O `favicon.ico` original era o placeholder padrão do `create-next-app` (nunca tinha sido trocado) — por isso aparecia o triângulo da Vercel em vez da logo em alguns navegadores/dispositivos.
 - Corrigido: `favicon.ico` (multi-tamanho) e `apple-icon.png` gerados a partir da logo real, declarados explicitamente em `src/app/layout.tsx`.
+
+### Ícone ao instalar como app / PWA (2026-07-23)
+- **Problema relatado por Pedro:** ao instalar o UniControl como app no PC (Chrome/Edge "Instalar app") e no celular ("Adicionar à tela de início"), o ícone ficava feio, desproporcional e cortado.
+- **Causa:** o projeto não tinha nenhum Web App Manifest (`manifest.json`/`manifest.webmanifest`). Sem manifest, o navegador improvisa um ícone ao instalar, e o `apple-icon.png` existente tinha a logo colada nas bordas do canvas (sem margem) — a máscara que o SO aplica ao instalar (círculo no Android, cantos arredondados no iOS/Windows) cortava a logo.
+- **Correção:**
+  - Criado `src/app/manifest.ts` (convenção do Next — servido automaticamente em `/manifest.webmanifest`), com nome, cor de tema (`#2B3D4F`, o mesmo azul da sidebar) e ícones em 192px/512px, incluindo a variante `maskable`.
+  - Regenerados `src/app/apple-icon.png`, `public/icons/icon-192.png` e `public/icons/icon-512.png`: a marca (as 3 barrinhas) recriada com ~20% de margem em todos os lados sobre fundo sólido `#2B3D4F` — margem suficiente pra sobreviver a qualquer máscara de ícone do SO.
+  - `src/app/layout.tsx` agora referencia o manifest e declara `viewport.themeColor` + `appleWebApp` para uma experiência melhor como app instalado.
+- **Decisão de escopo:** o favicon/ícone do app é sempre a marca UniControl, igual pra todas as empresas — não muda por tenant nem depois do login (é definido uma única vez no layout raiz). Ficou de fora dessa mudança a personalização por empresa (logo/nome próprios pós-login), que foi avaliada mas descartada por Pedro por enquanto.
 
 ### Busca em Mercadorias Enviadas
 - Filtro de texto livre em `goods-shipped/page.tsx`, combinado com as abas de situação (Todos/No Prazo/Atrasadas/Entregues).
