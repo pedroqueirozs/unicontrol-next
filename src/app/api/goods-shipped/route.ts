@@ -24,7 +24,7 @@ export async function GET() {
 
   const shipments = await prisma.goodsShipped.findMany({
     where: { companyId: session.user.companyId },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ shippingDate: "desc" }, { createdAt: "desc" }],
   })
 
   return NextResponse.json(shipments)
