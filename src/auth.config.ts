@@ -8,7 +8,10 @@ import type { Role } from "@/generated/prisma/enums"
 // jwt/session ficam aqui (não em auth.ts) para que o middleware também
 // tenha acesso a role/companyId na sessão decodificada do token.
 export const authConfig: NextAuthConfig = {
-  session: { strategy: "jwt" },
+  // maxAge em segundos: sessão expira em 1 dia (antes era o padrão do NextAuth, 30 dias).
+  // Pedido do Pedro — o sistema é usado diariamente, então fazer login de novo a cada
+  // início de dia é um bom equilíbrio entre segurança e conveniência.
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 },
   pages: { signIn: "/login" },
   providers: [Credentials({})],
   callbacks: {
